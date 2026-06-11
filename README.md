@@ -14,8 +14,11 @@ KOReader.
 - The Kindle was detected at `/media/lachlan/Kindle`.
 - A visible-root backup was saved under `device-backups/`.
 - WinterBreak2 files were copied to the Kindle root.
-- A temporary OTA space filler was written, leaving about 81 MiB free.
-- The Kindle filesystem was unmounted after staging.
+- WinterBreak completed on the Kindle; `winterbreak.log` confirms developer
+  keys were installed and the jailbreak finished.
+- Hotfix, MRPI, KUAL, and KOReader were copied to the Kindle.
+- The temporary OTA space filler was removed.
+- The Kindle filesystem was unmounted after post-jailbreak staging.
 
 Run this after reconnecting the Kindle:
 
@@ -49,8 +52,12 @@ After the on-device jailbreak succeeds, stage Hotfix, MRPI, KUAL, and KOReader:
 /home/lachlan/Projects/Kindle/scripts/stage-post-jailbreak.sh
 ```
 
-The post-jailbreak staging script removes `.kindle-ota-space-filler.bin`
-automatically before copying Hotfix/KUAL/MRPI/KOReader.
+This has already been run. The next required action is on the Kindle:
+
+1. Install `Update_hotfix_universal.bin` with `Update Your Kindle`.
+2. After reboot, open the `Run Hotfix` booklet if it appears.
+3. Search for `;log mrpi` to install KUAL.
+4. Open KUAL and launch KOReader.
 
 If auto-detection fails but you know the mount root:
 

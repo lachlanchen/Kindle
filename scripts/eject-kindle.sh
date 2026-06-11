@@ -10,8 +10,13 @@ fi
 
 sync
 
-if command -v gio >/dev/null 2>&1; then
-  gio mount -e "$kindle_root"
+if command -v gio >/dev/null 2>&1 && gio mount -e "$kindle_root"; then
+  exit 0
+fi
+
+source_device="$(findmnt -rn -o SOURCE --target "$kindle_root" || true)"
+if [[ -n "$source_device" ]]; then
+  udisksctl unmount -b "$source_device" || gio mount -u "$kindle_root"
 else
-  udisksctl unmount -b "$(findmnt -rn -o SOURCE --target "$kindle_root")"
+  printf 'No active mount found for %s\n' "$kindle_root"
 fi

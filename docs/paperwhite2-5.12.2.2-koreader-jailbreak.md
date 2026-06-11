@@ -36,6 +36,21 @@ Observed on 2026-06-11:
 - A temporary `.kindle-ota-space-filler.bin` was written to leave about 81 MiB
   free for the browser/jailbreak step.
 - The Kindle filesystem was unmounted afterward.
+- The user ran WinterBreak2 on the Kindle, turned Airplane Mode on, and
+  reconnected the device.
+- `winterbreak.log` confirms:
+  - developer keys installed successfully
+  - developer flag enabled
+  - `mntus` exec flag enabled
+  - jailbreak finished
+  - hotfix is required next
+- Post-jailbreak staging completed:
+  - `.kindle-ota-space-filler.bin` removed
+  - `Update_hotfix_universal.bin` copied to root
+  - MRPI copied to `extensions/MRInstaller`
+  - KUAL copied to `mrpackages/Update_KUALBooklet_HDRepack.bin`
+  - KOReader copied to `extensions/koreader` and `koreader`
+- The Kindle was unmounted after post-jailbreak staging.
 
 Earlier connection issue:
 
@@ -157,7 +172,7 @@ Eject:
 
 ## Step 3: Run WinterBreak2 on the Kindle
 
-Status: waiting for user action on the Kindle.
+Status: completed on 2026-06-11.
 
 On the Kindle:
 
@@ -172,7 +187,7 @@ On the Kindle:
 
 ## Step 4: Stage Hotfix, MRPI, KUAL, and KOReader
 
-Status: not yet run.
+Status: completed on 2026-06-11.
 
 Reconnect the Kindle to Ubuntu after WinterBreak2 succeeds:
 
@@ -195,6 +210,8 @@ Eject again:
 ```
 
 ## Step 5: Finish on the Kindle
+
+Status: waiting for user action on the Kindle.
 
 On the Kindle:
 
