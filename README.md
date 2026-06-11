@@ -59,6 +59,18 @@ This has already been run. The next required action is on the Kindle:
 3. Search for `;log mrpi` to install KUAL.
 4. Open KUAL and launch KOReader.
 
+Sync LinguaLeaf color PDFs to a KOReader-friendly folder:
+
+```bash
+/home/lachlan/Projects/Kindle/scripts/sync-lingualleaf-books.sh
+```
+
+The books are copied to:
+
+```text
+documents/LinguaLeaf/en-main-color/
+```
+
 If auto-detection fails but you know the mount root:
 
 ```bash
@@ -74,6 +86,7 @@ If auto-detection fails but you know the mount root:
 - `staging/post-jailbreak-root/`: files copied after WinterBreak2 succeeds.
 - `firmware/`: reserved for firmware notes or official firmware files.
 - `docs/`: local procedure notes.
+- `references/`: command and file references for repeatable workflows.
 - `logs/downloads.sha256`: hashes for the downloaded packages.
 
 See `docs/paperwhite2-5.12.2.2-koreader-jailbreak.md` for the full procedure.
