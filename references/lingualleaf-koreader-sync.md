@@ -7,6 +7,8 @@ Date: 2026-06-11
 Sync the color LinguaLeaf PDF books to a folder that is easy to open from
 KOReader on the Kindle.
 
+Status: completed on 2026-06-11.
+
 ## Source Files
 
 ```text
@@ -36,6 +38,18 @@ USB mount path from Ubuntu:
 ```text
 /media/lachlan/Kindle/documents/LinguaLeaf/en-main-color/
 ```
+
+Verified copied files:
+
+```text
+Les Misérables（日文注）.pdf                   28705466 bytes
+Notre-Dame de Paris（日文注）.pdf              17201384 bytes
+One Hundred Years of Solitude（日文注）.pdf    15837858 bytes
+The Count of Monte Cristo（日文注）.pdf         27913066 bytes
+Wuthering Heights（日文注）.pdf                14181176 bytes
+```
+
+After sync, the Kindle had about 2.7 GB free.
 
 The same folder as seen by KOReader on the Kindle:
 
