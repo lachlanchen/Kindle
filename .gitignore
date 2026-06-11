@@ -1,0 +1,18 @@
+# Device/private data
+device-backups/
+
+# Downloaded release artifacts and extracted package trees are reproducible from
+# the URLs and checksums recorded in docs/package-manifest.md.
+downloads/
+packages/
+staging/
+
+# Local run state
+logs/latest-backup.txt
+
+# Large Kindle/Amazon package formats if manually dropped into the repo.
+*.bin
+*.zip
+*.tar
+*.tar.gz
+*.tgz
