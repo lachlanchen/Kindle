@@ -11,6 +11,8 @@ Status: completed on 2026-06-11.
 
 ## Source Files
 
+Color edition:
+
 ```text
 /home/lachlan/Nutstore Files/Projects/LinguaLeaf/books/en-main-color/Wuthering Heights（日文注）.pdf
 /home/lachlan/Nutstore Files/Projects/LinguaLeaf/books/en-main-color/One Hundred Years of Solitude（日文注）.pdf
@@ -19,7 +21,17 @@ Status: completed on 2026-06-11.
 /home/lachlan/Nutstore Files/Projects/LinguaLeaf/books/en-main-color/Notre-Dame de Paris（日文注）.pdf
 ```
 
-Observed sizes before sync:
+Black-white edition:
+
+```text
+/home/lachlan/Nutstore Files/Projects/LinguaLeaf/books/en-main-blackwhite/Wuthering Heights（日文注・黑白）.pdf
+/home/lachlan/Nutstore Files/Projects/LinguaLeaf/books/en-main-blackwhite/One Hundred Years of Solitude（日文注・黑白）.pdf
+/home/lachlan/Nutstore Files/Projects/LinguaLeaf/books/en-main-blackwhite/The Count of Monte Cristo（日文注・黑白）.pdf
+/home/lachlan/Nutstore Files/Projects/LinguaLeaf/books/en-main-blackwhite/Les Misérables（日文注・黑白）.pdf
+/home/lachlan/Nutstore Files/Projects/LinguaLeaf/books/en-main-blackwhite/Notre-Dame de Paris（日文注・黑白）.pdf
+```
+
+Observed color sizes before sync:
 
 ```text
 Wuthering Heights（日文注）.pdf                 14M
@@ -31,15 +43,26 @@ Notre-Dame de Paris（日文注）.pdf              17M
 
 Total size is about 102 MB.
 
+Observed black-white sizes before sync:
+
+```text
+Wuthering Heights（日文注・黑白）.pdf                 5.1M
+One Hundred Years of Solitude（日文注・黑白）.pdf    5.4M
+The Count of Monte Cristo（日文注・黑白）.pdf         17M
+Les Misérables（日文注・黑白）.pdf                   21M
+Notre-Dame de Paris（日文注・黑白）.pdf              7.1M
+```
+
 ## Kindle Target Folder
 
 USB mount path from Ubuntu:
 
 ```text
 /media/lachlan/Kindle/documents/LinguaLeaf/en-main-color/
+/media/lachlan/Kindle/documents/LinguaLeaf/en-main-blackwhite/
 ```
 
-Verified copied files:
+Verified copied color files:
 
 ```text
 Les Misérables（日文注）.pdf                   28705466 bytes
@@ -49,12 +72,23 @@ The Count of Monte Cristo（日文注）.pdf         27913066 bytes
 Wuthering Heights（日文注）.pdf                14181176 bytes
 ```
 
-After sync, the Kindle had about 2.7 GB free.
+Verified copied black-white files:
+
+```text
+Les Misérables（日文注・黑白）.pdf                   21208446 bytes
+Notre-Dame de Paris（日文注・黑白）.pdf              7383528 bytes
+One Hundred Years of Solitude（日文注・黑白）.pdf    5656217 bytes
+The Count of Monte Cristo（日文注・黑白）.pdf         17173868 bytes
+Wuthering Heights（日文注・黑白）.pdf                5316672 bytes
+```
+
+After syncing both editions, the Kindle had about 2.7 GB free.
 
 The same folder as seen by KOReader on the Kindle:
 
 ```text
 /mnt/us/documents/LinguaLeaf/en-main-color/
+/mnt/us/documents/LinguaLeaf/en-main-blackwhite/
 ```
 
 Reason for using `documents/LinguaLeaf/en-main-color`:
@@ -84,11 +118,19 @@ Usage with explicit mount root:
 /home/lachlan/Projects/Kindle/scripts/sync-lingualleaf-books.sh /media/lachlan/Kindle
 ```
 
+Available edition options:
+
+```bash
+/home/lachlan/Projects/Kindle/scripts/sync-lingualleaf-books.sh --color
+/home/lachlan/Projects/Kindle/scripts/sync-lingualleaf-books.sh --blackwhite
+/home/lachlan/Projects/Kindle/scripts/sync-lingualleaf-books.sh --all
+```
+
 The script:
 
 1. Detects the Kindle root if no path is supplied.
-2. Verifies all five source PDFs exist.
-3. Creates `documents/LinguaLeaf/en-main-color/` on the Kindle.
+2. Verifies the selected source PDFs exist.
+3. Creates the selected `documents/LinguaLeaf/...` folder on the Kindle.
 4. Uses `rsync -a --info=progress2` to copy each PDF.
 5. Runs `sync`.
 6. Prints the copied PDF list.
@@ -101,7 +143,7 @@ On the Kindle:
 2. Launch KOReader.
 3. In KOReader's file browser, open `documents`.
 4. Open `LinguaLeaf`.
-5. Open `en-main-color`.
+5. Open `en-main-color` or `en-main-blackwhite`.
 6. Select one of the PDF files.
 
 If KOReader opens somewhere else, use the file browser's parent-folder entry
