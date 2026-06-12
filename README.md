@@ -23,7 +23,7 @@ KOReader.
 Run this after reconnecting the Kindle:
 
 ```bash
-/home/lachlan/Projects/Kindle/scripts/detect-kindle.sh
+./scripts/detect-kindle.sh
 ```
 
 ## Main Commands
@@ -31,25 +31,25 @@ Run this after reconnecting the Kindle:
 Verify downloads:
 
 ```bash
-/home/lachlan/Projects/Kindle/scripts/check-downloads.sh
+./scripts/check-downloads.sh
 ```
 
 Rebuild extracted package cache and copy-ready staging trees:
 
 ```bash
-/home/lachlan/Projects/Kindle/scripts/build-staging.sh
+./scripts/build-staging.sh
 ```
 
 Stage WinterBreak2 to the Kindle root:
 
 ```bash
-/home/lachlan/Projects/Kindle/scripts/stage-winterbreak2.sh
+./scripts/stage-winterbreak2.sh
 ```
 
 After the on-device jailbreak succeeds, stage Hotfix, MRPI, KUAL, and KOReader:
 
 ```bash
-/home/lachlan/Projects/Kindle/scripts/stage-post-jailbreak.sh
+./scripts/stage-post-jailbreak.sh
 ```
 
 This has already been run. The next required action is on the Kindle:
@@ -62,7 +62,7 @@ This has already been run. The next required action is on the Kindle:
 Sync LinguaLeaf color PDFs to a KOReader-friendly folder:
 
 ```bash
-/home/lachlan/Projects/Kindle/scripts/sync-lingualleaf-books.sh
+./scripts/sync-lingualleaf-books.sh
 ```
 
 The books are copied to:
@@ -74,8 +74,8 @@ documents/LinguaLeaf/en-main-color/
 If auto-detection fails but you know the mount root:
 
 ```bash
-/home/lachlan/Projects/Kindle/scripts/stage-winterbreak2.sh /media/lachlan/Kindle
-/home/lachlan/Projects/Kindle/scripts/stage-post-jailbreak.sh /media/lachlan/Kindle
+./scripts/stage-winterbreak2.sh /media/lachlan/Kindle
+./scripts/stage-post-jailbreak.sh /media/lachlan/Kindle
 ```
 
 ## Layout

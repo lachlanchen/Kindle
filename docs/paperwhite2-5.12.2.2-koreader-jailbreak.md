@@ -28,7 +28,7 @@ Observed on 2026-06-11:
   `/media/lachlan/Kindle`.
 - `lsusb` showed `1949:0004 Lab126, Inc. Amazon Kindle 3/4/Paperwhite`.
 - A visible-root backup was saved in:
-  `/home/lachlan/Projects/Kindle/device-backups/kindle-visible-root-20260611-170916`.
+  `device-backups/kindle-visible-root-20260611-170916`.
 - WinterBreak2 was copied to Kindle root:
   - `jb.sh`
   - `patchedUks.sqsh`
@@ -64,7 +64,7 @@ Earlier connection issue:
 Files are stored in:
 
 ```bash
-/home/lachlan/Projects/Kindle/downloads
+downloads/
 ```
 
 Downloaded files:
@@ -80,7 +80,7 @@ Downloaded files:
 Verify:
 
 ```bash
-/home/lachlan/Projects/Kindle/scripts/check-downloads.sh
+./scripts/check-downloads.sh
 ```
 
 ## Why These Packages
@@ -113,7 +113,7 @@ Sources:
 ## Workspace Layout
 
 ```text
-/home/lachlan/Projects/Kindle/
+Kindle/
   downloads/              original package downloads
   packages/               extracted package cache
   staging/
@@ -132,7 +132,7 @@ cable. The Kindle should display USB Drive Mode.
 Check from Ubuntu:
 
 ```bash
-/home/lachlan/Projects/Kindle/scripts/detect-kindle.sh
+./scripts/detect-kindle.sh
 lsblk -o NAME,MODEL,SIZE,FSTYPE,LABEL,MOUNTPOINTS,TRAN,TYPE
 ```
 
@@ -147,13 +147,13 @@ Status: completed on 2026-06-11.
 Once the Kindle is visible:
 
 ```bash
-/home/lachlan/Projects/Kindle/scripts/stage-winterbreak2.sh
+./scripts/stage-winterbreak2.sh
 ```
 
 If needed, pass the mount path explicitly:
 
 ```bash
-/home/lachlan/Projects/Kindle/scripts/stage-winterbreak2.sh /media/lachlan/Kindle
+./scripts/stage-winterbreak2.sh /media/lachlan/Kindle
 ```
 
 Expected Kindle root files after copy:
@@ -167,7 +167,7 @@ winterbreak2/
 Eject:
 
 ```bash
-/home/lachlan/Projects/Kindle/scripts/eject-kindle.sh
+./scripts/eject-kindle.sh
 ```
 
 ## Step 3: Run WinterBreak2 on the Kindle
@@ -192,7 +192,7 @@ Status: completed on 2026-06-11.
 Reconnect the Kindle to Ubuntu after WinterBreak2 succeeds:
 
 ```bash
-/home/lachlan/Projects/Kindle/scripts/stage-post-jailbreak.sh
+./scripts/stage-post-jailbreak.sh
 ```
 
 This copies:
@@ -206,7 +206,7 @@ This copies:
 Eject again:
 
 ```bash
-/home/lachlan/Projects/Kindle/scripts/eject-kindle.sh
+./scripts/eject-kindle.sh
 ```
 
 ## Step 5: Finish on the Kindle

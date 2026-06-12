@@ -103,27 +103,27 @@ Reason for using `documents/LinguaLeaf/en-main-color`:
 Sync script:
 
 ```bash
-/home/lachlan/Projects/Kindle/scripts/sync-lingualleaf-books.sh
+./scripts/sync-lingualleaf-books.sh
 ```
 
 Usage with auto-detected Kindle mount:
 
 ```bash
-/home/lachlan/Projects/Kindle/scripts/sync-lingualleaf-books.sh
+./scripts/sync-lingualleaf-books.sh
 ```
 
 Usage with explicit mount root:
 
 ```bash
-/home/lachlan/Projects/Kindle/scripts/sync-lingualleaf-books.sh /media/lachlan/Kindle
+./scripts/sync-lingualleaf-books.sh /media/lachlan/Kindle
 ```
 
 Available edition options:
 
 ```bash
-/home/lachlan/Projects/Kindle/scripts/sync-lingualleaf-books.sh --color
-/home/lachlan/Projects/Kindle/scripts/sync-lingualleaf-books.sh --blackwhite
-/home/lachlan/Projects/Kindle/scripts/sync-lingualleaf-books.sh --all
+./scripts/sync-lingualleaf-books.sh --color
+./scripts/sync-lingualleaf-books.sh --blackwhite
+./scripts/sync-lingualleaf-books.sh --all
 ```
 
 The script:
@@ -175,7 +175,7 @@ normal Kindle USBMS behavior when USB is plugged in.
 Local reference:
 
 ```text
-/home/lachlan/Projects/Kindle/packages/koreader-kindlepw2-v2026.03/koreader/frontend/device/kindle/device.lua
+packages/koreader-kindlepw2-v2026.03/koreader/frontend/device/kindle/device.lua
 ```
 
 Relevant behavior:

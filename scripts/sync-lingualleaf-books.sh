@@ -11,6 +11,10 @@ usage() {
 Usage: sync-lingualleaf-books.sh [--color|--blackwhite|--all] [KINDLE_ROOT]
 
 Default edition is --color for backward compatibility.
+
+Environment:
+  LINGUALEAF_COLOR_DIR       source folder for color PDFs
+  LINGUALEAF_BLACKWHITE_DIR  source folder for black-white PDFs
 EOF
 }
 
@@ -89,20 +93,23 @@ sync_books() {
   find "$target" -maxdepth 1 -type f -name '*.pdf' -printf '%f\t%k KiB\n' | sort
 }
 
+color_dir="${LINGUALEAF_COLOR_DIR:-/home/lachlan/Nutstore Files/Projects/LinguaLeaf/books/en-main-color}"
+blackwhite_dir="${LINGUALEAF_BLACKWHITE_DIR:-/home/lachlan/Nutstore Files/Projects/LinguaLeaf/books/en-main-blackwhite}"
+
 declare -a color_books=(
-  "/home/lachlan/Nutstore Files/Projects/LinguaLeaf/books/en-main-color/Wuthering Heights（日文注）.pdf"
-  "/home/lachlan/Nutstore Files/Projects/LinguaLeaf/books/en-main-color/One Hundred Years of Solitude（日文注）.pdf"
-  "/home/lachlan/Nutstore Files/Projects/LinguaLeaf/books/en-main-color/The Count of Monte Cristo（日文注）.pdf"
-  "/home/lachlan/Nutstore Files/Projects/LinguaLeaf/books/en-main-color/Les Misérables（日文注）.pdf"
-  "/home/lachlan/Nutstore Files/Projects/LinguaLeaf/books/en-main-color/Notre-Dame de Paris（日文注）.pdf"
+  "$color_dir/Wuthering Heights（日文注）.pdf"
+  "$color_dir/One Hundred Years of Solitude（日文注）.pdf"
+  "$color_dir/The Count of Monte Cristo（日文注）.pdf"
+  "$color_dir/Les Misérables（日文注）.pdf"
+  "$color_dir/Notre-Dame de Paris（日文注）.pdf"
 )
 
 declare -a blackwhite_books=(
-  "/home/lachlan/Nutstore Files/Projects/LinguaLeaf/books/en-main-blackwhite/Wuthering Heights（日文注・黑白）.pdf"
-  "/home/lachlan/Nutstore Files/Projects/LinguaLeaf/books/en-main-blackwhite/One Hundred Years of Solitude（日文注・黑白）.pdf"
-  "/home/lachlan/Nutstore Files/Projects/LinguaLeaf/books/en-main-blackwhite/The Count of Monte Cristo（日文注・黑白）.pdf"
-  "/home/lachlan/Nutstore Files/Projects/LinguaLeaf/books/en-main-blackwhite/Les Misérables（日文注・黑白）.pdf"
-  "/home/lachlan/Nutstore Files/Projects/LinguaLeaf/books/en-main-blackwhite/Notre-Dame de Paris（日文注・黑白）.pdf"
+  "$blackwhite_dir/Wuthering Heights（日文注・黑白）.pdf"
+  "$blackwhite_dir/One Hundred Years of Solitude（日文注・黑白）.pdf"
+  "$blackwhite_dir/The Count of Monte Cristo（日文注・黑白）.pdf"
+  "$blackwhite_dir/Les Misérables（日文注・黑白）.pdf"
+  "$blackwhite_dir/Notre-Dame de Paris（日文注・黑白）.pdf"
 )
 
 case "$edition" in
