@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use Kindle, please cite this repository."
+type: software
+title: "Kindle: Kindle Paperwhite 2 Jailbreak and KOReader Setup Workspace"
+version: 0.1.0
+date-released: 2026-06-12
+abstract: "A reproducible Kindle Paperwhite 2 jailbreak and KOReader setup workspace for firmware 5.12.2.2."
+authors:
+  - family-names: Chen
+    given-names: Lachlan
+    alias: lachlanchen
+repository-code: "https://github.com/lachlanchen/Kindle"
+url: "https://lazying.art"
+keywords:
+  - kindle
+  - paperwhite
+  - jailbreak
+  - koreader
+  - linux-scripts
