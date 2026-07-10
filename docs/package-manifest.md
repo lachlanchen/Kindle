@@ -41,3 +41,23 @@ not tracked in git.
 - SHA-256: `46e969bb13765b2630b5e14aa2e7fa2445ec551ccaa47db3efe644d0e34944b0`
 - Reason: `kindlepw2` is the correct KOReader package family for PW2 and
   newer supported Kindle firmware in this workflow.
+
+## Modern Windows Helper Downloads
+
+These are downloaded dynamically by `scripts/kindle-jailbreak.ps1 -Action
+DownloadModern` because the connected 2026-07-10 device reported firmware
+`5.18.1`, which is outside the original WinterBreak2/PW2 path.
+
+- File: `AdBreak-latest.zip`
+- URL source: latest release asset from `https://github.com/KindleModding/AdBreak`
+- Reason: KindleModding routes firmware `5.18.1+` to AdBreak when prerequisites
+  are satisfied.
+
+- File: `PEKI-latest.zip`
+- URL source: latest release asset from `https://github.com/KindleTweaks/PEKI`
+- Reason: KindleModding now recommends PEKI for K5 and newer KUAL setup by
+  copying `KUAL.jar` and `KUAL.sh` into `documents/`.
+
+- File: `koreader-kindlehf-v2026.03.zip`
+- URL: `https://build.koreader.rocks/download/stable/2026.03/koreader-kindlehf-v2026.03.zip`
+- Reason: KOReader uses the `kindlehf` package for firmware `>= 5.16.3`.

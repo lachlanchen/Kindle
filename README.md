@@ -41,6 +41,19 @@ Ignored local folders include `downloads/`, `packages/`, `staging/`, and `device
 
 ## Quick Start
 
+Windows fast path:
+
+```powershell
+cd C:\Users\Administrator\Projects\Kindle
+powershell -ExecutionPolicy Bypass -File .\scripts\kindle-jailbreak.ps1 -Action Diagnose
+powershell -ExecutionPolicy Bypass -File .\scripts\kindle-jailbreak.ps1 -Action DownloadModern
+```
+
+The Windows script detects the mounted Kindle, reads `system/version.txt`, and
+blocks unsafe method mismatches. See
+[docs/windows-fast-jailbreak-runbook.md](docs/windows-fast-jailbreak-runbook.md)
+for the direct next-time workflow.
+
 Verify downloaded package hashes:
 
 ```bash
