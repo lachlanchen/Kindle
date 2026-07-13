@@ -1,0 +1,123 @@
+name: Release Kindle Book Sender
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.label }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Windows x64
+            runner: windows-latest
+            artifact: kindle-sender-windows
+            platform: windows
+          - label: Linux x64
+            runner: ubuntu-22.04
+            artifact: kindle-sender-linux
+            platform: linux
+          - label: macOS Apple Silicon
+            runner: macos-15
+            artifact: kindle-sender-macos-arm64
+            platform: mac-arm64
+          - label: macOS Intel
+            runner: macos-15-intel
+            artifact: kindle-sender-macos-intel
+            platform: mac-intel
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: app/requirements-build.txt
+
+      - name: Install build dependencies
+        run: python -m pip install --upgrade -r app/requirements-build.txt
+
+      - name: Build native application
+        run: python app/build.py
+
+      - name: Package Windows download
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path release -Force | Out-Null
+          Copy-Item "app\dist\Kindle Book Sender.exe" "release\Kindle-Book-Sender-Windows-x64.exe"
+
+      - name: Package Linux download
+        if: matrix.platform == 'linux'
+        shell: bash
+        run: |
+          mkdir -p release
+          chmod +x "app/dist/Kindle Book Sender"
+          cp "app/dist/Kindle Book Sender" "release/Kindle-Book-Sender-Linux-x86_64"
+          tar -C release -czf "release/Kindle-Book-Sender-Linux-x86_64.tar.gz" \
+            "Kindle-Book-Sender-Linux-x86_64"
+          rm "release/Kindle-Book-Sender-Linux-x86_64"
+
+      - name: Package Apple Silicon download
+        if: matrix.platform == 'mac-arm64'
+        shell: bash
+        run: |
+          mkdir -p release
+          ditto -c -k --sequesterRsrc --keepParent \
+            "app/dist/Kindle Book Sender.app" \
+            "release/Kindle-Book-Sender-macOS-Apple-Silicon.zip"
+
+      - name: Package Intel Mac download
+        if: matrix.platform == 'mac-intel'
+        shell: bash
+        run: |
+          mkdir -p release
+          ditto -c -k --sequesterRsrc --keepParent \
+            "app/dist/Kindle Book Sender.app" \
+            "release/Kindle-Book-Sender-macOS-Intel.zip"
+
+      - name: Upload native package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: release/*
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all native packages
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Generate SHA-256 checksums
+        shell: bash
+        run: |
+          cd release-assets
+          sha256sum * > SHA256SUMS.txt
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh release create "$GITHUB_REF_NAME" release-assets/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --generate-notes \
+            --title "Kindle Book Sender $GITHUB_REF_NAME"

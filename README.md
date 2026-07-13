@@ -7,6 +7,7 @@
 *A reproducible Kindle Paperwhite 2 jailbreak and KOReader setup workspace for firmware `5.12.2.2`.*
 
 [![Website](https://img.shields.io/badge/LazyingArt-lazying.art-0EA5E9?style=for-the-badge)](https://lazying.art)
+[![Book Sender](https://img.shields.io/badge/Kindle%20Book%20Sender-Download-0D5C4B?style=for-the-badge)](https://lachlanchen.github.io/Kindle/)
 [![Device](https://img.shields.io/badge/Device-Kindle%20PW2-64748B?style=for-the-badge)](docs/paperwhite2-5.12.2.2-koreader-jailbreak.md)
 [![Workflow](https://img.shields.io/badge/Workflow-WinterBreak2%20%2B%20KOReader-16A34A?style=for-the-badge)](docs/package-manifest.md)
 [![Sponsor](https://img.shields.io/badge/Sponsor-lachlanchen-EA4AAA?style=for-the-badge&logo=githubsponsors&logoColor=white)](https://github.com/sponsors/lachlanchen)
@@ -90,6 +91,18 @@ If auto-detection fails but the mount root is known:
 ./scripts/stage-winterbreak2.sh /media/lachlan/Kindle
 ./scripts/stage-post-jailbreak.sh /media/lachlan/Kindle
 ```
+
+## Kindle Book Sender
+
+Download the native Windows, Ubuntu/Linux, Intel Mac, or Apple Silicon app:
+
+https://lachlanchen.github.io/Kindle/
+
+First use requires one USB connection so the app can generate a key for that
+computer and install only its public key on the Kindle. Later, put both devices
+on the same Wi-Fi, start KOReader's SSH server, click **Find my Kindle**, drag in
+books, and send. Discovery, IP selection, SFTP/SCP fallback, and the destination
+folder are automatic.
 
 ## LinguaLeaf Sync
 

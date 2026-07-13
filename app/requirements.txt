@@ -1,0 +1,4 @@
+PySide6>=6.8,<7
+paramiko>=3.5,<5
+psutil>=6,<8
+scp>=0.15,<1

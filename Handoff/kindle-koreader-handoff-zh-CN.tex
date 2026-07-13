@@ -1,0 +1,668 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[margin=18mm,headheight=21pt,footskip=26pt]{geometry}
+\usepackage{fontspec}
+\usepackage{xeCJK}
+\usepackage[table]{xcolor}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{fancyvrb}
+\usepackage[most]{tcolorbox}
+\usepackage{lastpage}
+
+\setmainfont{Georgia}
+\setsansfont{Segoe UI}
+\setmonofont{Consolas}[Scale=0.82]
+\setCJKmainfont{Microsoft YaHei}
+\setCJKsansfont{Microsoft YaHei}
+\setCJKmonofont{Microsoft YaHei}
+
+\definecolor{Ink}{HTML}{17201C}
+\definecolor{Forest}{HTML}{0D5C4B}
+\definecolor{ForestDark}{HTML}{073C32}
+\definecolor{Mint}{HTML}{E8F3EE}
+\definecolor{MintDeep}{HTML}{C9E2D8}
+\definecolor{Amber}{HTML}{B46B18}
+\definecolor{AmberPale}{HTML}{FFF3DF}
+\definecolor{Red}{HTML}{A6332A}
+\definecolor{RedPale}{HTML}{FBE9E7}
+\definecolor{Slate}{HTML}{52605A}
+\definecolor{Paper}{HTML}{FBFAF6}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=Forest,
+  urlcolor=Forest,
+  pdftitle={Kindle 与 KOReader 简体中文交接使用手册},
+  pdfauthor={AgInTi Flow, LazyingArt LLC},
+  pdfsubject={Kindle Paperwhite 10 代、KOReader、图书传输与 SSH 使用指南}
+}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+\renewcommand{\arraystretch}{1.22}
+\setlist[itemize]{leftmargin=1.6em,itemsep=0.25em,topsep=0.35em}
+\setlist[enumerate]{leftmargin=1.8em,itemsep=0.35em,topsep=0.35em}
+\renewcommand{\contentsname}{目录}
+
+\titleformat{\section}
+  {\sffamily\Large\bfseries\color{Forest}}
+  {\thesection}{0.65em}{}
+  [\vspace{0.15em}\color{MintDeep}\titlerule]
+\titleformat{\subsection}
+  {\sffamily\large\bfseries\color{Ink}}
+  {\thesubsection}{0.55em}{}
+\titlespacing*{\section}{0pt}{1.25em}{0.65em}
+\titlespacing*{\subsection}{0pt}{0.95em}{0.35em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\sffamily\small\color{Forest}\textbf{Kindle + KOReader}}
+\fancyhead[R]{\sffamily\small\color{Slate}简体中文交接手册}
+\fancyfoot[L]{\sffamily\scriptsize\color{Slate}AgInTi Flow · LazyingArt LLC}
+\fancyfoot[R]{\sffamily\scriptsize\color{Slate}第 \thepage\ 页，共 \pageref*{LastPage} 页}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{MintDeep}\leaders\hrule height \headrulewidth\hfill}}
+\renewcommand{\footrulewidth}{0pt}
+
+\newtcolorbox{statusbox}[1][]{
+  enhanced,
+  breakable,
+  colback=Mint,
+  colframe=Forest,
+  coltitle=white,
+  fonttitle=\sffamily\bfseries,
+  title=当前状态,
+  boxrule=0.7pt,
+  arc=2mm,
+  left=3mm,right=3mm,top=2.5mm,bottom=2.5mm,
+  #1
+}
+
+\newtcolorbox{warningbox}[1][]{
+  enhanced,
+  breakable,
+  colback=RedPale,
+  colframe=Red,
+  coltitle=white,
+  fonttitle=\sffamily\bfseries,
+  title=重要安全提示,
+  boxrule=0.8pt,
+  arc=2mm,
+  left=3mm,right=3mm,top=2.5mm,bottom=2.5mm,
+  #1
+}
+
+\newtcolorbox{tipbox}[1][]{
+  enhanced,
+  breakable,
+  colback=AmberPale,
+  colframe=Amber,
+  coltitle=white,
+  fonttitle=\sffamily\bfseries,
+  title=实用提示,
+  boxrule=0.7pt,
+  arc=2mm,
+  left=3mm,right=3mm,top=2.5mm,bottom=2.5mm,
+  #1
+}
+
+\begin{document}
+\color{Ink}
+
+\begin{titlepage}
+\pagecolor{Paper}
+\thispagestyle{empty}
+
+\vspace*{10mm}
+
+{\sffamily\bfseries\fontsize{13}{16}\selectfont\color{Amber}
+AGINTI FLOW · LAZYINGART LLC\par}
+
+\vspace{16mm}
+
+{\sffamily\bfseries\fontsize{35}{41}\selectfont\color{ForestDark}
+Kindle\\[-0.05em]
+\& KOReader\par}
+
+\vspace{4mm}
+
+{\sffamily\bfseries\fontsize{23}{29}\selectfont\color{Ink}
+简体中文交接使用手册\par}
+
+\vspace{7mm}
+
+{\large
+从放入第一本书，到 PDF 重排、旋转、无线传输、SSH 管理与安全返回原生系统。\par}
+
+\vspace{14mm}
+
+\begin{tcolorbox}[
+  enhanced,
+  colback=Forest,
+  colframe=Forest,
+  boxrule=0pt,
+  arc=3mm,
+  left=5mm,right=5mm,top=4mm,bottom=4mm
+]
+\color{white}
+\sffamily
+\textbf{设备配置}\\[0.35em]
+Kindle Paperwhite 10 代（PW4） · 固件 5.18.1\\
+Sanctuary 越狱 · KOReader · KPM · Dropbear SSH\\
+KOReader SSH：端口 2222 · 用户 root
+\end{tcolorbox}
+
+\vfill
+
+\begin{tabularx}{\textwidth}{@{}Xr@{}}
+\begin{tabular}[b]{@{}l@{}}
+{\sffamily\small\color{Slate}编写：\textbf{AgInTi Flow, LazyingArt LLC}}\\
+{\sffamily\small\color{Slate}\href{https://flow.lazying.art}{flow.lazying.art}}\\
+{\sffamily\small\color{Slate}\href{https://lazying.art}{lazying.art}}
+\end{tabular}
+&
+{\sffamily\small\color{Slate}\today}\\
+\end{tabularx}
+
+\end{titlepage}
+\nopagecolor
+
+\tableofcontents
+\clearpage
+
+\section{先看这一页}
+
+这份手册面向不熟悉命令行的普通用户。最简单的传书方法是 \textbf{USB 数据线}；需要经常传书时，可以使用 \textbf{Wi-Fi + SSH/SCP}。
+
+\begin{statusbox}
+\begin{itemize}
+  \item KOReader 已安装，可以阅读 PDF、EPUB、MOBI、DJVU、CBZ、DOCX、TXT 等格式。
+  \item 五本 LinguaLeaf 黑白版 PDF 已放入 Kindle 的 \texttt{documents} 目录。
+  \item KOReader 的 SSH 公钥已经安装。
+  \item 当前示例 IP 是 \texttt{192.168.1.109}，但路由器以后可能会分配不同地址。
+  \item \textbf{KOReader 自动启动目前故意关闭。} Kindle 顶层存储中保留了 \texttt{DISABLE\_KOREADER\_AUTOSTART} 安全标记，因此重启后会进入亚马逊原生界面。
+\end{itemize}
+\end{statusbox}
+
+\begin{tipbox}
+日常使用只需记住三件事：书放进 \texttt{documents}；KOReader 顶部边缘打开主菜单；需要回到原生 Kindle 时选择 \textbf{退出 KOReader}。
+\end{tipbox}
+
+\section{这台 Kindle 能做什么}
+
+\subsection{已安装的主要组件}
+
+\begin{longtable}{@{}p{0.28\textwidth}p{0.64\textwidth}@{}}
+\toprule
+\textbf{组件} & \textbf{用途} \\
+\midrule
+Sanctuary 越狱 & 允许设备运行经过用户授权的扩展和工具 \\
+KPM & 在 Kindle 上安装和管理扩展包 \\
+KOReader & 功能强大的开源阅读器，尤其适合 PDF、扫描书和多语言文档 \\
+Dropbear SSH & 通过局域网传书和管理 Kindle 文件 \\
+恢复标记 & 通过 USB 文件阻止自动进入 KOReader，确保可以返回原生系统 \\
+\bottomrule
+\end{longtable}
+
+\subsection{常见支持格式}
+
+KOReader 可打开 PDF、EPUB、DJVU、MOBI、FB2、HTML、TXT、Markdown、RTF、DOCX、CHM、XPS、CBZ、CBT、图片等格式。不同格式的功能略有差异。
+
+\begin{itemize}
+  \item \textbf{EPUB 等流式电子书}：可以自由改变字体、字号、行距、页边距与排版。
+  \item \textbf{PDF 固定版面}：可以裁边、适合宽度、横屏、分栏、重排、增强对比度和 OCR。
+  \item \textbf{扫描 PDF}：通常适合裁边、横屏、对比度和 OCR；如果没有文字层，直接重排的效果可能较差。
+\end{itemize}
+
+\section{打开与退出 KOReader}
+
+\subsection{打开 KOReader}
+
+从原生 Kindle 主界面打开 KUAL/KPM 对应入口，然后选择 KOReader。设备上的具体入口名称可能因安装包版本而略有不同。
+
+\subsection{退出并回到原生 Kindle}
+
+\begin{enumerate}
+  \item 在阅读页面点击屏幕顶部边缘，打开 KOReader 顶部菜单。
+  \item 打开主菜单或工具菜单。
+  \item 选择 \textbf{退出 KOReader（Exit KOReader）}。
+\end{enumerate}
+
+退出后会回到亚马逊原生 Kindle 界面。只是想回原生系统时，不需要选择关机或重启。
+
+\subsection{如果界面卡住}
+
+持续按住电源键，直到 Kindle 重新启动，通常可能需要约 40 秒。由于自动启动目前关闭，设备重启后应进入原生 Kindle。
+
+\section{用 USB 数据线传书}
+
+\subsection{最简单的操作步骤}
+
+\begin{enumerate}
+  \item 用 USB 数据线连接 Kindle 与电脑。
+  \item 在 Windows 文件资源管理器中打开新出现的 Kindle 驱动器，例如 \texttt{F:}。
+  \item 打开 \texttt{documents} 文件夹。
+  \item 建议建立分类文件夹，例如 \texttt{Books}、\texttt{LinguaLeaf} 或作者名称。
+  \item 将 PDF、EPUB 等书籍复制进去。
+  \item 等待复制结束，在 Windows 中安全弹出 Kindle，然后拔线。
+  \item 打开 KOReader 文件浏览器，进入 \texttt{documents} 找到书籍。
+\end{enumerate}
+
+\begin{tipbox}
+Windows 分配的盘符可能从 \texttt{F:} 变成其他字母，这不影响 Kindle。只要驱动器中能看到 \texttt{documents} 和 \texttt{koreader} 文件夹，就找对了。
+\end{tipbox}
+
+\subsection{当前已经复制的五本书}
+
+这些黑白版 PDF 已放入：
+
+\begin{Verbatim}[fontsize=\small]
+/mnt/us/documents/LinguaLeaf/en-main-blackwhite/
+\end{Verbatim}
+
+\begin{itemize}
+  \item A Game of Thrones（日文・中文注）
+  \item A Clash of Kings（日文・中文注）
+  \item A Storm of Swords（日文・中文注）
+  \item A Feast for Crows（日文・中文注）
+  \item A Dance with Dragons（日文・中文注）
+\end{itemize}
+
+\subsection{不要忽略 \texttt{.sdr} 文件夹}
+
+KOReader 经常在书籍旁边建立名称以 \texttt{.sdr} 结尾的文件夹，用来保存阅读进度、裁边方式、旋转方向、书签、笔记与高亮。备份或移动书籍时，最好把对应的 \texttt{.sdr} 文件夹一起处理。
+
+\section{推荐方法：Kindle Book Sender}
+
+对于普通用户，最简单的方法是使用免费的 Kindle Book Sender 桌面应用：
+
+\begin{center}
+\href{https://lachlanchen.github.io/Kindle/}{\textbf{https://lachlanchen.github.io/Kindle/}}
+\end{center}
+
+网站会根据当前电脑推荐 Windows、Ubuntu/Linux 或 macOS 下载。应用会自动处理 IP 地址、SSH 密钥、SFTP 与 SCP，因此用户不需要输入终端命令。
+
+\subsection{第一次使用：USB 自动配对}
+
+\begin{enumerate}
+  \item 从网站下载并打开 Kindle Book Sender。
+  \item 用 USB 数据线连接已经安装 KOReader 的 Kindle。
+  \item 应用会识别同时含有 \texttt{documents} 和 \texttt{koreader} 的 Kindle 驱动器。
+  \item 应用为这台电脑建立一把新的 RSA 密钥，并且只把公钥加入 Kindle。
+  \item 在系统中安全弹出 Kindle，然后拔掉数据线。
+\end{enumerate}
+
+应用生成的私钥只保存在当前电脑的用户应用数据目录。它与本 PDF 后面嵌入的交接私钥相互独立，也不会包含在公开下载的软件中。
+
+\subsection{以后每次无线传书}
+
+\begin{enumerate}
+  \item 让 Kindle 和电脑连接同一个可信 Wi-Fi。
+  \item 打开 KOReader，然后启动 \textbf{工具 > SSH 服务器}。
+  \item 在应用中点击 \textbf{我们在同一个 Wi-Fi -- 查找我的 Kindle}。
+  \item 将书拖进窗口，或者点击按钮选择书籍。
+  \item 点击 \textbf{发送书籍}。
+\end{enumerate}
+
+应用首先检查上一次成功连接的地址，然后只扫描本机正在使用的私有局域网和 2222 端口。候选设备必须通过专用密钥认证，并确认存在 \path{/mnt/us/koreader} 后才会显示为 Kindle。书籍会放入 \path{/mnt/us/documents/Books}；支持 SFTP 时优先使用，否则自动改用 SCP。
+
+\subsection{不同系统的提示}
+
+\begin{itemize}
+  \item \textbf{Windows}：打开下载的 \texttt{.exe}。若出现 SmartScreen，选择 \textbf{更多信息}，然后选择 \textbf{仍要运行}。
+  \item \textbf{Ubuntu/Linux}：解压下载包，允许程序文件作为应用运行，然后打开。
+  \item \textbf{macOS}：在网站选择 Apple Silicon 或 Intel。由于社区版本没有 Apple 公证，第一次请按住 Control 点击应用，再选择 \textbf{打开}。
+\end{itemize}
+
+若自动发现失败，请重新进行 USB 配对，确认两台设备使用同一个 Wi-Fi 并已经启动 KOReader SSH，也可以在可选输入框中填写 Kindle IP。下面的手动 SSH 方法仍可用于诊断和恢复。
+
+\section{通过 Wi-Fi 无线传书}
+
+\subsection{连接前准备}
+
+\begin{enumerate}
+  \item 让电脑和 Kindle 连接同一个可信 Wi-Fi。
+  \item 在 Kindle 上打开 KOReader。
+  \item 打开顶部菜单，进入 \textbf{工具}，再进入 \textbf{SSH 服务器}。
+  \item 启动 SSH 服务器，并在传输期间保持 KOReader 运行。
+  \item 查看 Kindle 当前 IP 地址。本手册以 \texttt{192.168.1.109} 为例。
+\end{enumerate}
+
+这台 Kindle 的 KOReader SSH 使用：
+
+\begin{longtable}{@{}p{0.30\textwidth}p{0.62\textwidth}@{}}
+\toprule
+\textbf{设置} & \textbf{值} \\
+\midrule
+地址 & Kindle 当前 IP，例如 \texttt{192.168.1.109} \\
+端口 & \texttt{2222} \\
+用户名 & \texttt{root} \\
+认证 & 本交接包中的专用 RSA 私钥 \\
+密码 & 不需要 \\
+\bottomrule
+\end{longtable}
+
+\subsection{Windows 一键 SSH}
+
+在 Handoff 文件夹中打开 PowerShell，然后运行：
+
+\begin{Verbatim}[fontsize=\small]
+.\connect-kindle.cmd 192.168.1.109
+\end{Verbatim}
+
+等价的手动命令是：
+
+\begin{Verbatim}[fontsize=\small]
+ssh -i .\keys\kindle_handoff_rsa -p 2222 root@192.168.1.109
+\end{Verbatim}
+
+首次连接时，Windows 可能询问是否信任主机密钥。请先确认 IP 确实属于自己的 Kindle，再输入 \texttt{yes}。
+
+\subsection{Windows 一键传书}
+
+\begin{Verbatim}[fontsize=\small]
+.\send-books-to-kindle.ps1 -KindleIp 192.168.1.109 "C:\Books\Example.pdf"
+\end{Verbatim}
+
+文件路径有空格时必须放在英文双引号内。要一次发送多本书，可以在命令末尾继续添加多个带引号的完整路径。脚本会把书传到：
+
+\begin{Verbatim}[fontsize=\small]
+/mnt/us/documents/Books/
+\end{Verbatim}
+
+\subsection{手动使用 SCP}
+
+\begin{Verbatim}[fontsize=\footnotesize]
+scp -O -i .\keys\kindle_handoff_rsa -P 2222 "C:\Books\Example.pdf" root@192.168.1.109:/mnt/us/documents/Books/
+\end{Verbatim}
+
+注意：SSH 的端口参数是小写 \texttt{-p}，SCP 是大写 \texttt{-P}。\texttt{-O} 用于启用兼容 Kindle Dropbear 的传统 SCP 协议。
+
+\subsection{Linux 或 macOS}
+
+将专用私钥复制到可信电脑后，先限制文件权限：
+
+\begin{Verbatim}[fontsize=\small]
+chmod 600 kindle_handoff_rsa
+ssh -i ./kindle_handoff_rsa -p 2222 root@192.168.1.109
+\end{Verbatim}
+
+传书示例：
+
+\begin{Verbatim}[fontsize=\small]
+scp -O -i ./kindle_handoff_rsa -P 2222 Book.pdf root@192.168.1.109:/mnt/us/documents/Books/
+\end{Verbatim}
+
+\subsection{用 WinSCP 拖放文件}
+
+\begin{longtable}{@{}p{0.31\textwidth}p{0.61\textwidth}@{}}
+\toprule
+\textbf{WinSCP 设置} & \textbf{填写内容} \\
+\midrule
+文件协议 & 先尝试 SFTP；不支持时选择 SCP \\
+主机名 & Kindle 当前 IP \\
+端口 & \texttt{2222} \\
+用户名 & \texttt{root} \\
+密码 & 留空 \\
+私钥 & \path{Handoff\keys\kindle_handoff_rsa} \\
+远程书籍目录 & \path{/mnt/us/documents/Books} \\
+\bottomrule
+\end{longtable}
+
+若 WinSCP 提示 SFTP 子系统不可用，改用 \textbf{SCP}。如果软件询问是否把 OpenSSH 私钥转换成 PPK，可以允许转换；该 PPK 仍然只能用于这台 Kindle。
+
+\section{Kindle 中的重要路径}
+
+\begin{longtable}{@{}p{0.43\textwidth}p{0.49\textwidth}@{}}
+\toprule
+\textbf{路径} & \textbf{用途} \\
+\midrule
+\path{/mnt/us/documents/} & 放置书籍的主要位置 \\
+\path{/mnt/us/documents/Books/} & 推荐的一般书籍目录 \\
+\path{/mnt/us/documents/LinguaLeaf/} & 当前 LinguaLeaf 书库 \\
+\path{/mnt/us/koreader/} & KOReader 程序，不要随意删除或改名 \\
+\path{/mnt/us/koreader/settings/} & KOReader 设置与状态 \\
+\path{/mnt/us/koreader/settings/SSH/authorized_keys} & 允许登录的 SSH 公钥 \\
+\path{/mnt/us/DISABLE_KOREADER_AUTOSTART} & 禁止 KOReader 自动启动的恢复标记 \\
+\path{/mnt/us/ENABLE_KOREADER_AUTOSTART} & 未来安全启动器的启用标记，目前不应建立 \\
+\bottomrule
+\end{longtable}
+
+在 Windows USB 驱动器中看到的根目录，对应 Linux/SSH 中的 \path{/mnt/us}。
+
+\section{KOReader 日常阅读}
+
+\subsection{菜单和翻页}
+
+\begin{itemize}
+  \item 点击靠近屏幕 \textbf{顶部边缘} 的位置，打开顶部主菜单。
+  \item 点击靠近屏幕 \textbf{底部边缘} 的位置，打开阅读与进度工具。
+  \item 点击页面左侧或右侧进行前后翻页。
+  \item 长按文字可以选择、高亮、写笔记、查词或搜索。
+  \item 在文件浏览器进入 \texttt{documents}，点击书名即可阅读。
+\end{itemize}
+
+\subsection{让 PDF 字体变大}
+
+PDF 是固定版面，建议按以下顺序尝试：
+
+\begin{enumerate}
+  \item \textbf{裁边（Crop）}：去掉四周白边。
+  \item \textbf{适合宽度（Fit width）}：让正文占满屏幕宽度。
+  \item \textbf{横屏（Landscape）}：增加页面横向空间。
+  \item \textbf{分栏（Columns）}：按顺序阅读论文或报纸的多栏页面。
+  \item \textbf{重排（Reflow）}：重新组织文字，让它适合小屏幕。
+\end{enumerate}
+
+\subsection{理解 PDF 重排}
+
+重排最适合含有真实文字层的 PDF。它可以把固定页面中的文字重新排列，并允许放大，但表格、数学公式、脚注和复杂多栏排版可能被打乱。
+
+如果 PDF 只是扫描图片：
+
+\begin{itemize}
+  \item 先尝试裁边、横屏和提高对比度。
+  \item 有 OCR 功能时先识别文字。
+  \item 如果重排结果混乱，关闭重排，改用原始页面模式。
+\end{itemize}
+
+\subsection{常用 PDF 工具}
+
+\begin{longtable}{@{}p{0.28\textwidth}p{0.64\textwidth}@{}}
+\toprule
+\textbf{工具} & \textbf{作用} \\
+\midrule
+裁边 & 去掉白边，让正文显示得更大 \\
+适合宽度 & 让页面宽度适合屏幕 \\
+旋转/横屏 & 适合宽页面和小字体文档 \\
+分栏模式 & 按正确顺序阅读多栏内容 \\
+对比度 & 加深发灰或过浅的扫描文字 \\
+去水印 & 减少浅色背景和部分水印干扰 \\
+自动校正 & 修正轻微倾斜的扫描页面 \\
+面板缩放 & 更方便地阅读漫画或图片面板 \\
+OCR & 从扫描图片中识别可查询的文字 \\
+\bottomrule
+\end{longtable}
+
+\subsection{旋转页面}
+
+打开底部阅读菜单，选择旋转或方向图标，再选竖屏或横屏。KOReader 通常会按书保存方向，因此不同书可以使用不同设置。
+
+\subsection{高亮、笔记、书签与词典}
+
+\begin{itemize}
+  \item 长按并拖动选择文字，然后选择 \textbf{高亮} 或 \textbf{添加笔记}。
+  \item 使用书签按钮标记当前页。
+  \item 从顶部菜单打开目录、页码跳转或全文搜索。
+  \item 安装词典后，长按单词即可查词。
+  \item 阅读进度与标注通常位于书旁边的 \texttt{.sdr} 文件夹。
+\end{itemize}
+
+\subsection{其他实用功能}
+
+KOReader 还提供夜间模式、设备支持时的暖光控制、阅读统计、手势、自定义配置、书籍集合、OPDS 书库、Wallabag、calibre 无线连接和云存储插件。建议先使用默认设置，每次只调整一项。
+
+\section{返回原生系统与恢复}
+
+\subsection{正常返回}
+
+在 KOReader 顶部菜单中选择 \textbf{退出 KOReader}，即可返回亚马逊原生系统。
+
+\subsection{USB 安全恢复方法}
+
+将 Kindle 连接电脑，在驱动器最外层确保存在以下文件或文件夹：
+
+\begin{Verbatim}[fontsize=\small]
+DISABLE_KOREADER_AUTOSTART
+\end{Verbatim}
+
+同时删除：
+
+\begin{Verbatim}[fontsize=\small]
+ENABLE_KOREADER_AUTOSTART
+\end{Verbatim}
+
+安全启动器的设计原则是：只要禁用标记存在，就必须优先进入原生系统，即使启用标记也存在。
+
+\begin{warningbox}
+当前自动启动尚未完成安全测试，因此保持禁用是正确状态。不要为了方便而手动建立 \texttt{ENABLE\_KOREADER\_AUTOSTART}。
+\end{warningbox}
+
+\section{专用 Kindle SSH 密钥}
+
+\subsection{密钥信息}
+
+\begin{longtable}{@{}p{0.31\textwidth}p{0.61\textwidth}@{}}
+\toprule
+\textbf{项目} & \textbf{内容} \\
+\midrule
+私钥文件 & \path{Handoff\keys\kindle_handoff_rsa} \\
+公钥文件 & \path{Handoff\keys\kindle_handoff_rsa.pub} \\
+算法 & RSA 3072 位 \\
+注释 & \texttt{AgInTi-Flow-Kindle-Handoff-ONLY} \\
+指纹 & \texttt{SHA256:Q/RgMY4wzHjQYuC3sfHDykwp8ejp9C7wyfAZLE8OMJE} \\
+私钥文件 SHA-256 & \texttt{D278BB1D9BB278371B4CFD162C4F6139F64D7AD079584F560B6CED57F4DF3B50} \\
+口令 & 无，仅用于简化这台阅读设备的交接 \\
+\bottomrule
+\end{longtable}
+
+公钥已经加入 Kindle。私钥没有被设置成 Windows 的默认 SSH 密钥，所有命令都通过 \texttt{-i} 明确指定它。
+
+\begin{warningbox}
+\textbf{本 PDF 按设备所有者要求，故意嵌入了完整私钥。此密钥只能用于这一台 Kindle。}
+
+绝对不要把它授权到 Windows、Linux、macOS 电脑、服务器、路由器、GitHub、云账户、另一台 Kindle 或任何其他设备。持有本 PDF 的人，只要能连接到正在运行 KOReader SSH 的 Kindle，就可能获得设备访问权限。
+\end{warningbox}
+
+\subsection{在另一台电脑使用}
+
+可以把单独的 \texttt{kindle\_handoff\_rsa} 私钥文件保存在受信任电脑上，然后使用本手册中的 \texttt{ssh -i} 命令。不要复制到系统默认私钥路径，也不要在其他主机的 \texttt{authorized\_keys} 中加入对应公钥。
+
+\subsection{通过 USB 重新安装公钥}
+
+连接 Kindle 后，在 Handoff 文件夹运行：
+
+\begin{Verbatim}[fontsize=\small]
+.\install-public-key-usb.ps1
+\end{Verbatim}
+
+脚本只会在公钥尚不存在时追加，因此可以重复运行。
+
+\subsection{撤销这把密钥}
+
+编辑：
+
+\begin{Verbatim}[fontsize=\small]
+/mnt/us/koreader/settings/SSH/authorized_keys
+\end{Verbatim}
+
+删除末尾带有以下注释的整行：
+
+\begin{Verbatim}[fontsize=\small]
+AgInTi-Flow-Kindle-Handoff-ONLY
+\end{Verbatim}
+
+然后停止并重新启动 KOReader SSH。只删除某一台电脑上的私钥并不能撤销其他副本；从 Kindle 删除公钥行才是正式撤销。
+
+\subsection{嵌入的完整私钥}
+
+优先使用 Handoff 文件夹中的独立私钥文件。从 PDF 复制可能改变字符或换行。
+
+\VerbatimInput[fontsize=\scriptsize]{keys/kindle_handoff_rsa}
+
+\section{常见问题}
+
+\begin{longtable}{@{}p{0.33\textwidth}p{0.59\textwidth}@{}}
+\toprule
+\textbf{现象} & \textbf{解决方法} \\
+\midrule
+连接超时 & 确认电脑和 Kindle 在同一 Wi-Fi、IP 正确、KOReader SSH 已启动，并使用端口 2222。 \\
+连接被拒绝 & 在 KOReader 中启动 SSH，并保持 KOReader 运行。 \\
+Permission denied & 使用 \texttt{-i} 指定专用私钥；必要时通过 USB 重新安装公钥。 \\
+主机身份已改变 & 先确认该 IP 属于 Kindle，再运行 \texttt{ssh-keygen -R [192.168.1.109]:2222} 清理旧记录。 \\
+SFTP 不可用 & WinSCP 改用 SCP，或在 \texttt{scp} 命令中加入 \texttt{-O}。 \\
+找不到新书 & 确认书在 \texttt{documents} 下，安全弹出 USB，然后刷新 KOReader 文件浏览器。 \\
+PDF 字太小 & 裁边、适合宽度、横屏，或尝试重排。 \\
+重排结果混乱 & 关闭重排，改用裁边、横屏、分栏或 OCR。 \\
+想回原生 Kindle & 选择退出 KOReader；卡住时重启，并保留禁用自动启动标记。 \\
+IP 地址变了 & 在 KOReader、路由器客户端列表或网络信息中查看新的 Kindle IP。 \\
+\bottomrule
+\end{longtable}
+
+\section{安全维护与备份}
+
+\begin{itemize}
+  \item 不需要联网时开启飞行模式。
+  \item 传输结束后停止 KOReader SSH。
+  \item 拔 USB 前在 Windows 中安全弹出 Kindle。
+  \item 不要随意删除越狱保留文件、KUAL/KPM、\texttt{koreader} 或不熟悉的顶层文件。
+  \item 重大操作前备份 \texttt{documents}、KOReader 设置和所有 \texttt{.sdr} 文件夹。
+  \item 安装亚马逊固件更新前，先确认新版本仍兼容当前越狱。
+  \item 不要把本手册中的私钥用于任何其他设备。
+\end{itemize}
+
+\section{交接包文件}
+
+\begin{longtable}{@{}p{0.44\textwidth}p{0.48\textwidth}@{}}
+\toprule
+\textbf{文件} & \textbf{用途} \\
+\midrule
+\path{kindle-koreader-handoff.pdf} & 英文版手册 \\
+\path{kindle-koreader-handoff-zh-CN.pdf} & 本简体中文版手册 \\
+\path{kindle-koreader-handoff-zh-CN.tex} & 中文版 XeLaTeX 源文件 \\
+\path{connect-kindle.cmd} & Windows 一键 SSH \\
+\path{send-books-to-kindle.ps1} & Wi-Fi 无线传书 \\
+\path{install-public-key-usb.ps1} & USB 公钥安装脚本 \\
+\path{ssh-config.example} & 可选 SSH 别名示例 \\
+\path{build-guide-zh.ps1} & 重新编译中文版 PDF \\
+\path{keys/kindle_handoff_rsa} & 仅限 Kindle 的私钥 \\
+\path{keys/kindle_handoff_rsa.pub} & 对应公钥 \\
+\bottomrule
+\end{longtable}
+
+\section{参考资料}
+
+\begin{itemize}
+  \item KOReader 官方使用手册：\url{https://koreader.rocks/user_guide/}
+  \item KOReader 源代码与发布：\url{https://github.com/koreader/koreader}
+  \item KindleModding KOReader 指南：\url{https://kindlemodding.org/jailbreaking/post-jailbreak/koreader.html}
+  \item Sanctuary 越狱文档：\url{https://kindlemodding.org/jailbreaking/Sanctuary/}
+  \item AgInTi Flow：\url{https://flow.lazying.art}
+  \item LazyingArt LLC：\url{https://lazying.art}
+\end{itemize}
+
+\vfill
+\begin{center}
+{\sffamily\bfseries\large\color{Forest}AgInTi Flow, LazyingArt LLC}\\[0.45em]
+\url{https://flow.lazying.art}\quad\textbullet\quad\url{https://lazying.art}\\[0.8em]
+简体中文交接版 · \today
+\end{center}
+
+\end{document}

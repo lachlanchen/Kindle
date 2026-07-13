@@ -16,3 +16,12 @@ logs/latest-backup.txt
 *.tar
 *.tar.gz
 *.tgz
+
+# Local desktop-app and handoff build output
+.venv/
+__pycache__/
+*.pyc
+app/build/
+app/dist/
+app/build-assets/
+Handoff/build/

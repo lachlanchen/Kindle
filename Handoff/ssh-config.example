@@ -1,0 +1,10 @@
+# Optional entry for C:\Users\YOUR_NAME\.ssh\config
+# Replace the IP if DHCP assigns the Kindle another address.
+# Never reuse this IdentityFile for another host.
+
+Host kindle-koreader
+    HostName 192.168.1.109
+    User root
+    Port 2222
+    IdentityFile C:/Users/YOUR_NAME/Projects/Kindle/Handoff/keys/kindle_handoff_rsa
+    IdentitiesOnly yes

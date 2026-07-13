@@ -1,0 +1,558 @@
+\documentclass[10pt,letterpaper]{article}
+
+\usepackage[margin=0.72in,headheight=18pt,footskip=28pt]{geometry}
+\usepackage{fontspec}
+\usepackage{xeCJK}
+\usepackage[table]{xcolor}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{fancyvrb}
+\usepackage[most]{tcolorbox}
+\usepackage{lastpage}
+
+\setmainfont{Georgia}
+\setsansfont{Segoe UI}
+\setmonofont{Consolas}[Scale=0.82]
+\setCJKmainfont{Microsoft YaHei}
+
+\definecolor{Ink}{HTML}{17201C}
+\definecolor{Forest}{HTML}{0D5C4B}
+\definecolor{Mint}{HTML}{E8F3EE}
+\definecolor{Amber}{HTML}{B46B18}
+\definecolor{AmberPale}{HTML}{FFF3DF}
+\definecolor{Red}{HTML}{A6332A}
+\definecolor{RedPale}{HTML}{FBE9E7}
+\definecolor{Slate}{HTML}{52605A}
+\definecolor{Paper}{HTML}{FBFAF6}
+\definecolor{Rule}{HTML}{CAD4CE}
+\definecolor{CodeBg}{HTML}{F0F3F1}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=Forest,
+  urlcolor=Forest,
+  citecolor=Forest,
+  pdftitle={Kindle and KOReader Layperson Handoff Guide},
+  pdfauthor={AgInTi Flow, LazyingArt LLC},
+  pdfsubject={Using KOReader, sending books, SSH, and recovery}
+}
+\urlstyle{same}
+
+\titleformat{\section}{\Large\bfseries\sffamily\color{Forest}}{\thesection}{0.65em}{}
+\titleformat{\subsection}{\large\bfseries\sffamily\color{Ink}}{\thesubsection}{0.6em}{}
+\titlespacing*{\section}{0pt}{1.4em}{0.55em}
+\titlespacing*{\subsection}{0pt}{1.0em}{0.35em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\sffamily\small AgInTi Flow / LazyingArt LLC}
+\rhead{\sffamily\small Kindle + KOReader}
+\cfoot{\sffamily\small \thepage\ of \pageref{LastPage}}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{Rule}\leaders\hrule height \headrulewidth\hfill}}
+
+\setlist[itemize]{leftmargin=1.35em,itemsep=0.25em,topsep=0.35em}
+\setlist[enumerate]{leftmargin=1.55em,itemsep=0.35em,topsep=0.35em}
+\renewcommand{\arraystretch}{1.22}
+
+\lstdefinestyle{terminal}{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{CodeBg},
+  frame=single,
+  rulecolor=\color{Rule},
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  xleftmargin=0.4em,
+  xrightmargin=0.4em,
+  aboveskip=0.55em,
+  belowskip=0.55em
+}
+\lstset{style=terminal}
+
+\newtcolorbox{quickbox}{
+  enhanced,colback=Mint,colframe=Forest,boxrule=0.8pt,arc=2mm,
+  left=3mm,right=3mm,top=2mm,bottom=2mm
+}
+\newtcolorbox{warningbox}{
+  enhanced,colback=RedPale,colframe=Red,boxrule=0.8pt,arc=2mm,
+  left=3mm,right=3mm,top=2mm,bottom=2mm
+}
+\newtcolorbox{tipbox}{
+  enhanced,colback=AmberPale,colframe=Amber,boxrule=0.8pt,arc=2mm,
+  left=3mm,right=3mm,top=2mm,bottom=2mm
+}
+
+\newcommand{\menupath}[1]{\textsf{\textbf{#1}}}
+\newcommand{\fileloc}[1]{\path{#1}}
+
+\begin{document}
+
+\begin{titlepage}
+  \pagecolor{Paper}
+  \color{Ink}
+  \vspace*{0.5in}
+  {\sffamily\bfseries\fontsize{13}{15}\selectfont AGINTI FLOW \hfill LAZYINGART LLC\par}
+  \vspace{0.55in}
+  {\color{Forest}\rule{\textwidth}{2.2pt}\par}
+  \vspace{0.42in}
+  {\sffamily\bfseries\fontsize{32}{36}\selectfont Kindle + KOReader\par}
+  \vspace{0.16in}
+  {\sffamily\fontsize{19}{23}\selectfont A layperson handoff guide\par}
+  \vspace{0.35in}
+  {\Large Send books, read PDFs comfortably, connect by SSH, and always return to the normal Kindle interface.\par}
+  \vfill
+  \begin{quickbox}
+    \textbf{Prepared for this device}\\
+    Kindle Paperwhite 10th generation (PW4)\\
+    Firmware 5.18.1; Sanctuary jailbreak; KPM; KOReader kindlehf\\
+    Last observed address: \texttt{192.168.1.109}; KOReader SSH port: \texttt{2222}
+  \end{quickbox}
+  \vspace{0.25in}
+  {\sffamily\large
+    \href{https://lazying.art}{lazying.art}\quad
+    \textbullet\quad
+    \href{https://flow.lazying.art}{flow.lazying.art}
+  \par}
+  \vspace{0.35in}
+  {\sffamily\small Edition: July 2026\par}
+\end{titlepage}
+\nopagecolor
+
+\tableofcontents
+\newpage
+
+\section{Start here}
+
+\begin{quickbox}
+\textbf{The easiest everyday workflow}
+\begin{enumerate}
+  \item In KOReader, open the File Browser.
+  \item Find books under \fileloc{/mnt/us/documents/}.
+  \item To add books with a cable, exit KOReader first, connect USB, and copy into the Kindle's \fileloc{documents} folder.
+  \item To add books over Wi-Fi, start KOReader's SSH server and use the included \fileloc{send-books-to-kindle.ps1}.
+  \item To return to Amazon's normal Kindle interface, choose \menupath{Exit KOReader}. It does not remove KOReader or the jailbreak.
+\end{enumerate}
+\end{quickbox}
+
+\subsection{What is installed}
+
+\begin{tabularx}{\textwidth}{>{\bfseries\sffamily}p{0.23\textwidth} X}
+\toprule
+Component & Purpose \\
+\midrule
+Sanctuary & The jailbreak used on firmware 5.18.1. It installed the modern Kindle package stack. \\
+KPM & Kindle Package Manager. KOReader was installed with \texttt{;kpm install koreader}. \\
+KOReader & The reading application. This device uses the \texttt{kindlehf} build because firmware 5.16.3 and later is hard-float. \\
+SSH server & KOReader's Dropbear SSH server, normally on TCP port 2222. It permits command-line access and wireless file transfer while KOReader is running. \\
+\bottomrule
+\end{tabularx}
+
+\subsection{What KOReader can open}
+
+KOReader supports PDF, EPUB, DJVU, MOBI, CBZ/CBT, DOCX, RTF, HTML, TXT, XPS, FB2, PDB, CHM, Markdown, images, and several archive formats. Amazon books can still be read in the normal Kindle interface. KOReader is especially useful for PDFs, technical documents, multilingual material, comics, and sideloaded EPUB files.
+
+\section{Moving between KOReader and the normal Kindle}
+
+\subsection{Enter KOReader}
+
+If the native Kindle Home screen is visible, tap the \textbf{KOReader} document/scriptlet in the library. KPM launches KOReader with the correct hard-float package.
+
+\subsection{Return to the normal Kindle interface}
+
+\begin{enumerate}
+  \item Tap near the top edge of the KOReader screen to reveal the top menu.
+  \item Open the main or hamburger menu.
+  \item Choose \menupath{Exit KOReader}.
+  \item Wait for the native Kindle Home screen to reappear.
+\end{enumerate}
+
+\begin{tipbox}
+\textbf{Exit is not uninstall.} Your books, settings, highlights, jailbreak, KPM, and KOReader remain installed. Open the KOReader library item whenever you want to return.
+\end{tipbox}
+
+\subsection{Autostart and the recovery switch}
+
+Autostart must always be optional. The safe design for this device uses two marker names at the visible USB root:
+
+\begin{tabularx}{\textwidth}{>{\ttfamily}p{0.43\textwidth} X}
+\toprule
+ENABLE\_KOREADER\_AUTOSTART & Allows one KOReader launch after boot. \\
+DISABLE\_KOREADER\_AUTOSTART & File or folder that overrides the enable marker and keeps the normal Kindle interface. \\
+\bottomrule
+\end{tabularx}
+
+The final autostart job must wait at least 30 seconds, check the disable marker both before and after the delay, launch only once, and never respawn KOReader. Therefore choosing \menupath{Exit KOReader} returns to the normal interface for the rest of that boot.
+
+\begin{warningbox}
+\textbf{Current handoff state: autostart is disabled.} A first experimental boot hook did not bring networking back reliably. The visible \fileloc{ENABLE_KOREADER_AUTOSTART} marker was removed and \fileloc{DISABLE_KOREADER_AUTOSTART} was created. Do not remove the disable marker until the replacement KMC-based hook has been installed and tested.
+\end{warningbox}
+
+\section{Send books by USB cable}
+
+USB is the simplest and most reliable method.
+
+\begin{enumerate}
+  \item In KOReader, choose \menupath{Exit KOReader}.
+  \item Connect the Kindle to the computer with a data-capable USB cable.
+  \item Open the drive named \textbf{Kindle}.
+  \item Open the \fileloc{documents} folder.
+  \item Create a clear folder such as \fileloc{documents/Books} or \fileloc{documents/LinguaLeaf/en-main-blackwhite}.
+  \item Copy the book files into that folder.
+  \item Use Windows \menupath{Safely Remove Hardware / Eject} before unplugging.
+  \item Open KOReader and browse to the same folder.
+\end{enumerate}
+
+\begin{tipbox}
+KOReader may not expose normal USB mass storage while it controls the screen. If the Kindle drive does not appear, exit KOReader and reconnect the cable.
+\end{tipbox}
+
+\subsection{Books placed on this Kindle}
+
+The following five bilingual black-and-white PDFs were copied into
+\fileloc{/mnt/us/documents/LinguaLeaf/en-main-blackwhite/}:
+
+\begin{itemize}
+  \item A Game of Thrones
+  \item A Clash of Kings
+  \item A Storm of Swords
+  \item A Feast for Crows
+  \item A Dance with Dragons
+\end{itemize}
+
+\subsection{Keep sidecar folders when backing up}
+
+KOReader commonly stores per-book progress, highlights, notes, and settings in a neighboring folder ending in \fileloc{.sdr}. When moving or backing up an annotated book, copy both the book and its matching \fileloc{.sdr} folder.
+
+\section{Recommended: use Kindle Book Sender}
+
+For a layperson, the easiest method is the free Kindle Book Sender desktop app:
+
+\begin{center}
+\href{https://lachlanchen.github.io/Kindle/}{\textbf{https://lachlanchen.github.io/Kindle/}}
+\end{center}
+
+The website automatically recommends the correct download for Windows, Ubuntu/Linux, or macOS. The app removes the need to find an IP address, type SSH commands, or choose between SFTP and SCP.
+
+\subsection{One-time pairing}
+
+\begin{enumerate}
+  \item Download and open Kindle Book Sender from the website.
+  \item Connect the running-KOReader Kindle to the computer with a USB data cable.
+  \item The app recognizes a drive containing both \texttt{documents} and \texttt{koreader}.
+  \item It creates a new RSA key for that computer and installs only its public key on the Kindle.
+  \item Safely eject and unplug the Kindle.
+\end{enumerate}
+
+The app-generated private key stays in that computer's user application-data folder. It is separate from the handoff key embedded later in this PDF and is never included in public downloads.
+
+\subsection{Every wireless transfer after pairing}
+
+\begin{enumerate}
+  \item Put the Kindle and computer on the same trusted Wi-Fi.
+  \item Open KOReader, then start \textbf{Tools > SSH server}.
+  \item In the app, click \textbf{We're on the same Wi-Fi -- Find my Kindle}.
+  \item Drag books into the app or choose them with the file picker.
+  \item Click \textbf{Send books}.
+\end{enumerate}
+
+The app checks the previously verified address first, then scans only active private local networks on port 2222. A candidate is accepted only after key authentication and confirmation that \path{/mnt/us/koreader} exists. Books are placed in \path{/mnt/us/documents/Books}; SFTP is used when available and SCP is selected automatically as a fallback.
+
+\subsection{Platform notes}
+
+\begin{itemize}
+  \item \textbf{Windows}: open the downloaded \texttt{.exe}. If SmartScreen appears, choose \textbf{More info}, then \textbf{Run anyway}.
+  \item \textbf{Ubuntu/Linux}: extract the archive, allow the application file to run as a program, then open it.
+  \item \textbf{macOS}: choose Apple Silicon or Intel on the website. Because the community build is not notarized, Control-click the app and choose \textbf{Open} the first time.
+\end{itemize}
+
+If automatic discovery does not succeed, repeat USB pairing, confirm the same Wi-Fi and running KOReader SSH, or enter the Kindle IP in the optional address field. The manual SSH method below remains available for diagnosis and recovery.
+
+\section{Send books over Wi-Fi with SSH}
+
+\subsection{Before connecting}
+
+\begin{enumerate}
+  \item Connect the computer and Kindle to the same trusted Wi-Fi network.
+  \item Open KOReader on the Kindle.
+  \item Open the top menu, choose \textbf{Tools}, then \textbf{SSH server}.
+  \item Start the SSH server and keep KOReader open while transferring.
+  \item Note the Kindle's IP address. This guide uses \texttt{192.168.1.109} as an example; DHCP may assign a different address later.
+\end{enumerate}
+
+KOReader's SSH service uses port \textbf{2222}, user \textbf{root}, and the dedicated key supplied with this package. It is separate from ordinary Windows Remote Desktop and from port 22.
+
+\subsection{Open a shell from Windows}
+
+Open PowerShell in the Handoff folder and run:
+
+\begin{Verbatim}[fontsize=\small]
+.\connect-kindle.cmd 192.168.1.109
+\end{Verbatim}
+
+The equivalent manual command is:
+
+\begin{Verbatim}[fontsize=\small]
+ssh -i .\keys\kindle_handoff_rsa -p 2222 root@192.168.1.109
+\end{Verbatim}
+
+The first connection may ask whether the host key is trusted. Confirm only after checking that the address belongs to your Kindle on your own local network.
+
+\subsection{Send books wirelessly}
+
+Use the supplied PowerShell helper:
+
+\begin{Verbatim}[fontsize=\small]
+.\send-books-to-kindle.ps1 -KindleIp 192.168.1.109 "C:\Books\Example Book.pdf"
+\end{Verbatim}
+
+To send several books, add each full path as another quoted argument. The helper creates \path{/mnt/us/documents/Books} if needed and uses legacy SCP mode for compatibility with KOReader's Dropbear SSH server.
+
+\subsection{Manual SCP command}
+
+\begin{Verbatim}[fontsize=\small]
+scp -O -i .\keys\kindle_handoff_rsa -P 2222 "C:\Books\Example.pdf" root@192.168.1.109:/mnt/us/documents/Books/
+\end{Verbatim}
+
+SSH uses lowercase \texttt{-p}; SCP uses uppercase \texttt{-P}. The \texttt{-O} option selects the older SCP transfer protocol supported reliably by this Kindle setup.
+
+\subsection{Use WinSCP instead of commands}
+
+For drag-and-drop transfer, create a WinSCP site with:
+
+\begin{longtable}{@{}p{0.30\textwidth}p{0.62\textwidth}@{}}
+\toprule
+\textbf{Setting} & \textbf{Value} \\
+\midrule
+File protocol & SFTP first; if unavailable, select SCP \\
+Host name & Kindle IP, for example \texttt{192.168.1.109} \\
+Port number & \texttt{2222} \\
+User name & \texttt{root} \\
+Password & Leave empty \\
+Private key & \path{Handoff\keys\kindle_handoff_rsa} \\
+Remote folder & \path{/mnt/us/documents/Books} \\
+\bottomrule
+\end{longtable}
+
+If WinSCP reports that SFTP is unavailable, change the protocol to \textbf{SCP}. It is acceptable to let WinSCP convert this dedicated key to PPK format.
+
+\section{Where files live}
+
+\begin{longtable}{@{}p{0.42\textwidth}p{0.50\textwidth}@{}}
+\toprule
+\textbf{Kindle path} & \textbf{Purpose} \\
+\midrule
+\path{/mnt/us/documents/} & Books visible to the native library and KOReader \\
+\path{/mnt/us/documents/Books/} & Recommended general KOReader book folder \\
+\path{/mnt/us/documents/LinguaLeaf/} & Current LinguaLeaf collection \\
+\path{/mnt/us/koreader/} & KOReader application; do not casually rename or delete \\
+\path{/mnt/us/koreader/settings/} & KOReader preferences and SSH settings \\
+\path{/mnt/us/koreader/settings/SSH/authorized_keys} & Public keys allowed to log in \\
+\path{/mnt/us/DISABLE_KOREADER_AUTOSTART} & Safety marker preventing automatic launch \\
+\path{/mnt/us/ENABLE_KOREADER_AUTOSTART} & Future opt-in marker; do not create until a safe launcher is tested \\
+\bottomrule
+\end{longtable}
+
+The USB drive letter, such as \texttt{F:}, is selected by Windows and can change. The Linux path \path{/mnt/us} always means the user-visible Kindle storage.
+
+\section{Everyday KOReader use}
+
+\subsection{Open menus and books}
+
+\begin{itemize}
+  \item Tap near the \textbf{top edge} to open KOReader's top menu.
+  \item Tap near the \textbf{bottom edge} to open reading controls.
+  \item In the file browser, enter \texttt{documents}, then tap a book.
+  \item Tap the left or right side to move backward or forward.
+  \item Long-press text for highlighting, dictionary lookup, search, or notes.
+\end{itemize}
+
+\subsection{Make a PDF easier to read}
+
+\begin{enumerate}
+  \item Open the bottom reading menu.
+  \item Choose a crop mode to remove white margins.
+  \item Try \textbf{Fit width} for ordinary single-column pages.
+  \item Rotate to landscape when the page is too wide.
+  \item For text-heavy PDFs, enable \textbf{Reflow} so KOReader rearranges text to fit.
+\end{enumerate}
+
+Reflow works best when the PDF contains a real text layer. A scan made only from page images may need OCR first. Reflow can disturb tables, equations, footnotes, and complex layouts; turn it off for those pages.
+
+\subsection{Useful PDF controls}
+
+\begin{itemize}
+  \item \textbf{Crop}: removes margins and enlarges print.
+  \item \textbf{Fit width}: fills the screen horizontally.
+  \item \textbf{Columns}: reads multi-column pages in sequence.
+  \item \textbf{Landscape}: gives wide pages more space.
+  \item \textbf{Contrast}: darkens faint scans.
+  \item \textbf{Dewatermark}: can reduce pale backgrounds.
+  \item \textbf{Auto-straighten}: corrects tilted scans.
+  \item \textbf{Panel zoom}: helps with comics and image panels.
+  \item \textbf{OCR}: supports selection or lookup from image text where available.
+\end{itemize}
+
+\subsection{Rotate the screen}
+
+Open the reading menu and choose the rotation or orientation icon. Select portrait or landscape. Rotation is stored per book.
+
+\subsection{Highlights, notes, and dictionaries}
+
+\begin{itemize}
+  \item Long-press and drag across text, then choose \textbf{Highlight} or \textbf{Add note}.
+  \item Use the bookmark control to mark the current page.
+  \item Use the table of contents, page search, or text search from the top menu.
+  \item Long-press a word for dictionary lookup after dictionaries are installed.
+  \item KOReader stores progress, highlights, and book settings in a nearby folder ending in \texttt{.sdr}. Back up each book together with its \texttt{.sdr} folder.
+\end{itemize}
+
+Other features include adjustable typography for reflowable books, night mode, warm-light controls when supported, reading statistics, gestures, profiles, collections, OPDS catalogs, Wallabag, calibre wireless access, and cloud-storage plugins.
+
+\section{Return to the normal Kindle system}
+
+\subsection{Normal exit}
+
+\begin{enumerate}
+  \item Tap the top edge to open KOReader's menu.
+  \item Open the main or tools menu.
+  \item Choose \textbf{Exit KOReader}.
+\end{enumerate}
+
+This returns to Amazon's native Kindle interface.
+
+\subsection{If KOReader is unresponsive}
+
+Hold the power button until the device restarts; this can take roughly 40 seconds. Because automatic launch is currently disabled, the Kindle should return to the native interface.
+
+\subsection{Recovery marker}
+
+While the Kindle is connected by USB, ensure this file or folder exists at the top level of the drive:
+
+\begin{Verbatim}[fontsize=\small]
+DISABLE_KOREADER_AUTOSTART
+\end{Verbatim}
+
+Remove \texttt{ENABLE\_KOREADER\_AUTOSTART} if it exists. A safe future launcher must always let the disable marker override the enable marker.
+
+\section{Dedicated handoff SSH key}
+
+This package contains an RSA 3072-bit key pair made only for this Kindle:
+
+\begin{longtable}{@{}p{0.31\textwidth}p{0.61\textwidth}@{}}
+\toprule
+\textbf{Item} & \textbf{Value} \\
+\midrule
+Private key & \path{Handoff\keys\kindle_handoff_rsa} \\
+Public key & \path{Handoff\keys\kindle_handoff_rsa.pub} \\
+Comment & \texttt{AgInTi-Flow-Kindle-Handoff-ONLY} \\
+Fingerprint & \texttt{SHA256:Q/RgMY4wzHjQYuC3sfHDykwp8ejp9C7wyfAZLE8OMJE} \\
+Private-file SHA-256 & \texttt{D278BB1D9BB278371B4CFD162C4F6139F64D7AD079584F560B6CED57F4DF3B50} \\
+Passphrase & None, for simple appliance-style access \\
+\bottomrule
+\end{longtable}
+
+The public key is in KOReader's SSH authorization file. The private key is not a default Windows SSH key; supplied commands select it explicitly with \texttt{-i}.
+
+\subsection{Important warning}
+
+\begin{center}
+\fbox{\parbox{0.90\textwidth}{
+\textbf{This private key is intentionally exposed in this PDF. Use it only for this Kindle. Never authorize it on Windows, Linux computers, servers, routers, GitHub, cloud accounts, or another device. Anyone holding this PDF can access the Kindle whenever KOReader SSH is running and reachable.}
+}}
+\end{center}
+
+Copy the private-key file to a trusted computer only when its user should control this Kindle.
+
+\subsection{Install the public key again over USB}
+
+\begin{Verbatim}[fontsize=\small]
+.\install-public-key-usb.ps1
+\end{Verbatim}
+
+The helper locates the mounted Kindle and appends the key only if it is absent.
+
+\subsection{Revoke this key}
+
+Open \path{/mnt/us/koreader/settings/SSH/authorized_keys}, delete the line ending in \texttt{AgInTi-Flow-Kindle-Handoff-ONLY}, then restart KOReader's SSH server. Deleting one copy of the private key does not revoke other copies; removing the public-key line does.
+
+\subsection{Embedded private key}
+
+Below is the complete Kindle-only private key. Prefer the separate file because copying from a PDF can alter characters or line endings.
+
+\VerbatimInput[fontsize=\scriptsize]{keys/kindle_handoff_rsa}
+
+\section{Troubleshooting}
+
+\begin{longtable}{@{}p{0.34\textwidth}p{0.58\textwidth}@{}}
+\toprule
+\textbf{Symptom} & \textbf{Action} \\
+\midrule
+Connection timed out & Confirm the same Wi-Fi, current IP, running KOReader SSH, and port 2222. \\
+Connection refused & Start SSH from KOReader and keep KOReader running. \\
+Permission denied & Select the key with \texttt{-i}; reinstall its public key over USB if needed. \\
+Host identification changed & Verify the device first, then run \texttt{ssh-keygen -R [192.168.1.109]:2222}. \\
+SFTP unavailable & Use SCP in WinSCP or add \texttt{-O} to \texttt{scp}. \\
+Book missing & Put it under \texttt{documents}, eject safely, then refresh the file browser. \\
+PDF text tiny & Crop, fit width, rotate to landscape, or try reflow. \\
+Bad reflow & Disable it and use crop, landscape, columns, or OCR. \\
+Need native Kindle & Exit KOReader; if stuck, reboot and retain the disable marker. \\
+\bottomrule
+\end{longtable}
+
+\section{Safe maintenance}
+
+\begin{itemize}
+  \item Keep airplane mode on when network access is unnecessary.
+  \item Safely eject the Kindle in Windows before unplugging USB.
+  \item Do not delete jailbreak preservation files, \texttt{koreader}, KUAL/KPM components, or unfamiliar top-level files.
+  \item Back up \texttt{documents}, KOReader settings, and all \texttt{.sdr} folders before major changes.
+  \item Do not install Amazon firmware until its jailbreak compatibility is checked.
+  \item Stop KOReader SSH after wireless administration.
+\end{itemize}
+
+\section{Package contents}
+
+\begin{longtable}{@{}p{0.43\textwidth}p{0.49\textwidth}@{}}
+\toprule
+\textbf{File} & \textbf{Purpose} \\
+\midrule
+\path{kindle-koreader-handoff.pdf} & Printable guide \\
+\path{kindle-koreader-handoff.tex} & XeLaTeX source \\
+\path{connect-kindle.cmd} & One-command Windows SSH \\
+\path{send-books-to-kindle.ps1} & Wireless book transfer \\
+\path{install-public-key-usb.ps1} & Idempotent public-key installer \\
+\path{ssh-config.example} & Optional SSH alias template \\
+\path{build-guide.ps1} & Rebuilds this PDF \\
+\path{keys/kindle_handoff_rsa} & Kindle-only private key \\
+\path{keys/kindle_handoff_rsa.pub} & Matching public key \\
+\bottomrule
+\end{longtable}
+
+\section{References}
+
+\begin{itemize}
+  \item KOReader User Guide: \url{https://koreader.rocks/user_guide/}
+  \item KOReader source: \url{https://github.com/koreader/koreader}
+  \item KindleModding KOReader guide: \url{https://kindlemodding.org/jailbreaking/post-jailbreak/koreader.html}
+  \item Sanctuary documentation: \url{https://kindlemodding.org/jailbreaking/Sanctuary/}
+  \item AgInTi Flow: \url{https://flow.lazying.art}
+  \item LazyingArt LLC: \url{https://lazying.art}
+\end{itemize}
+
+\vfill
+\begin{center}
+\textbf{Prepared by AgInTi Flow, LazyingArt LLC}\\[0.4em]
+\url{https://flow.lazying.art}\quad\textbullet\quad\url{https://lazying.art}\\[0.8em]
+Handoff edition dated \today
+\end{center}
+
+\end{document}
