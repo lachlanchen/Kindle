@@ -1,0 +1,90 @@
+name: Release Kindle Jailbreak Assistant
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "jailbreak-assistant-v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2022
+            artifact: windows-x64
+            asset: Kindle-Jailbreak-Assistant-Windows-x64.exe
+            package: windows
+          - os: ubuntu-22.04
+            artifact: linux-x64
+            asset: Kindle-Jailbreak-Assistant-Linux-x64.tar.gz
+            package: linux
+          - os: ubuntu-24.04-arm
+            artifact: linux-arm64
+            asset: Kindle-Jailbreak-Assistant-Linux-arm64.tar.gz
+            package: linux
+          - os: macos-13
+            artifact: macos-intel
+            asset: Kindle-Jailbreak-Assistant-macOS-Intel.zip
+            package: macos
+          - os: macos-14
+            artifact: macos-apple-silicon
+            asset: Kindle-Jailbreak-Assistant-macOS-Apple-Silicon.zip
+            package: macos
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: jailbreak-assistant
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: jailbreak-assistant/requirements-build.txt
+      - name: Install build dependencies
+        run: python -m pip install -r requirements-build.txt
+      - name: Build application
+        run: python build.py --clean-output
+      - name: Create package directory
+        shell: bash
+        run: mkdir -p package
+      - name: Package Windows
+        if: matrix.package == 'windows'
+        shell: pwsh
+        run: Copy-Item "dist/Kindle-Jailbreak-Assistant.exe" "package/${{ matrix.asset }}"
+      - name: Package Linux
+        if: matrix.package == 'linux'
+        shell: bash
+        run: tar -C dist -czf "package/${{ matrix.asset }}" Kindle-Jailbreak-Assistant
+      - name: Package macOS
+        if: matrix.package == 'macos'
+        shell: bash
+        run: ditto -c -k --sequesterRsrc --keepParent "dist/Kindle-Jailbreak-Assistant.app" "package/${{ matrix.asset }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: jailbreak-assistant/package/${{ matrix.asset }}
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/jailbreak-assistant-v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: Kindle Jailbreak Assistant ${{ github.ref_name }}
+          body_path: jailbreak-assistant/RELEASE_NOTES.md
+          files: release-assets/*
+          make_latest: false
+

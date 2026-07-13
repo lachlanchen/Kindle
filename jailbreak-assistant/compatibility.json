@@ -1,0 +1,350 @@
+{
+  "schema_version": 1,
+  "catalog_version": "2026.07.14",
+  "reviewed": "2026-07-14",
+  "models_url": "https://kindlemodding.org/models.json",
+  "catalog_url": "https://raw.githubusercontent.com/lachlanchen/Kindle/main/jailbreak-assistant/compatibility.json",
+  "sources": {
+    "models": "https://kindlemodding.org/kindle-models",
+    "faq": "https://kindlemodding.org/jailbreaking/jailbreak-faq.html",
+    "all_methods": "https://kindlemodding.org/jailbreaking/",
+    "post_jailbreak": "https://kindlemodding.org/jailbreaking/post-jailbreak/",
+    "koreader": "https://kindlemodding.org/jailbreaking/post-jailbreak/koreader.html",
+    "ota": "https://kindlemodding.org/jailbreaking/post-jailbreak/disable-ota.html"
+  },
+  "methods": [
+    {
+      "id": "springbreak",
+      "name": "SpringBreak",
+      "priority": 100,
+      "kind": "runner",
+      "guide_url": "https://kindlemodding.org/jailbreaking/SpringBreak/",
+      "summary": "Newest official host-assisted route for selected registered Kindles on the listed firmware builds.",
+      "platforms": ["windows", "linux", "macos"],
+      "space_guard": "forbidden",
+      "variants": [
+        {
+          "models": ["PW4", "KT4", "PW5", "PW5SE", "KT5"],
+          "firmware": {"exact": ["5.18.1.1.1", "5.19.2", "5.19.2.0.1"]},
+          "requirements": [
+            {"key": "registered", "allowed": ["yes"], "label": "Kindle must be registered"}
+          ]
+        }
+      ],
+      "package": {
+        "url": "https://github.com/KindleModding/SpringBreak/releases/download/v1.2/springbreak.zip",
+        "filename": "springbreak.zip",
+        "archive": "zip",
+        "sha256": "2880cbf765c57c3142f44d2339c4a3c70e3322a0e910f0ed2f698077078315f2",
+        "mode": "runner",
+        "runners": {
+          "windows": ["springbreak.exe"],
+          "linux": ["springbreak-linux"],
+          "macos": ["springbreak-darwin"]
+        }
+      },
+      "steps": [
+        "Remove any old filler files and leave generous free space.",
+        "Enable Airplane mode, restart, and connect the Kindle by USB.",
+        "Run the official helper from this app and select the detected Kindle.",
+        "Follow the official Store/Wi-Fi step promptly.",
+        "After success, reconnect and run the helper again for cleanup."
+      ],
+      "post_note": "Hotfix and KPM are included. Use ;kpm update and ;kpm install koreader."
+    },
+    {
+      "id": "sanctuary",
+      "name": "Sanctuary",
+      "priority": 95,
+      "kind": "web",
+      "guide_url": "https://kindlemodding.org/jailbreaking/Sanctuary/",
+      "summary": "Browser-based route that can work on unregistered and blacklisted Chromium-based Kindles.",
+      "platforms": ["windows", "linux", "macos"],
+      "space_guard": "recommended",
+      "variants": [
+        {
+          "models": ["PW4", "KT4", "KOA3", "KOA3W32C", "PW5", "PW5SE", "KT5", "KS", "KT6", "PW6", "KS2", "CS"],
+          "firmware": {"min": "5.16.4", "max": "5.18.3"},
+          "requirements": [
+            {"key": "browser", "allowed": ["chromium"], "label": "Chromium Kindle browser required"}
+          ]
+        }
+      ],
+      "steps": [
+        "Prevent automatic updates before enabling Wi-Fi.",
+        "Open the Kindle browser and use the official Sanctuary compatibility page.",
+        "Let port scanning finish, enter the displayed ID exactly, and connect.",
+        "Exit Browser, then open Settings, Help, Getting Started.",
+        "Wait for the success screen and UI restart."
+      ],
+      "post_note": "Hotfix and KPM are included. Use ;kpm update and ;kpm install koreader."
+    },
+    {
+      "id": "nosebleed",
+      "name": "Nosebleed",
+      "priority": 90,
+      "kind": "stage",
+      "guide_url": "https://kindlemodding.org/jailbreaking/Nosebleed/",
+      "summary": "Official browser route with a small USB payload; supports several blacklisted devices.",
+      "platforms": ["windows", "linux", "macos"],
+      "space_guard": "recommended",
+      "variants": [
+        {
+          "models": ["PW5", "PW5SE", "KT5", "KOA3", "KOA3W32C"],
+          "firmware": {"min": "5.16.4", "max": "5.18.6"},
+          "requirements": []
+        },
+        {
+          "models": ["PW6", "KT6"],
+          "firmware": {"min": "5.16.4", "max": "5.17.1.0.4"},
+          "requirements": [
+            {"key": "blacklisted", "allowed": ["yes"], "label": "This PW6/KT6 route is documented for blacklisted devices"}
+          ]
+        }
+      ],
+      "package": {
+        "url": "https://kindlemodding.org/jailbreaking/Nosebleed/nosebleed.zip",
+        "filename": "nosebleed.zip",
+        "archive": "zip",
+        "sha256": "",
+        "mode": "stage_root"
+      },
+      "steps": [
+        "Prevent automatic updates and enable Airplane mode.",
+        "Use Prepare Kindle to back up conflicts and copy the official three-file payload.",
+        "Eject, open Browser, and visit https://kindlemodding.org/nosb.",
+        "Follow the official on-screen trigger.",
+        "Return to Airplane mode immediately after success."
+      ],
+      "post_note": "Continue with the official post-jailbreak hotfix before reconnecting normally."
+    },
+    {
+      "id": "adbreak",
+      "name": "AdBreak",
+      "priority": 85,
+      "kind": "adbreak",
+      "guide_url": "https://kindlemodding.org/jailbreaking/AdBreak/",
+      "summary": "Advertisement-based route for registered Kindles that already display Special Offers.",
+      "platforms": ["windows", "linux", "macos"],
+      "space_guard": "optional",
+      "variants": [
+        {
+          "models": ["PW4", "KT4", "KOA3", "KOA3W32C", "PW5", "PW5SE", "KT5", "KS", "KT6", "PW6"],
+          "firmware": {"min": "5.18.1", "max": "5.18.5.0.1"},
+          "requirements": [
+            {"key": "registered", "allowed": ["yes"], "label": "Kindle must be registered"},
+            {"key": "ads", "allowed": ["yes"], "label": "Special Offers must already be downloaded and visible"}
+          ]
+        }
+      ],
+      "package": {
+        "url": "https://github.com/KindleModding/AdBreak/releases/download/1.1/AdBreak.1.1.zip",
+        "filename": "AdBreak.1.1.zip",
+        "archive": "zip",
+        "sha256": "d4febaff59364f81eb14a974bc2fb09a19d9e8f58745c9e80f46d1f8853e83d3",
+        "mode": "adbreak"
+      },
+      "steps": [
+        "Confirm multiple ads are visible in View all ads, then enable Airplane mode.",
+        "Connect by USB and use Prepare Kindle; the original .assets folder is backed up first.",
+        "Eject, open an ad, and follow the official Bang/Close sequence.",
+        "Ignore only the application errors the official guide identifies as expected.",
+        "Keep Airplane mode enabled and install the hotfix."
+      ],
+      "post_note": "Install the official hotfix before allowing normal network access."
+    },
+    {
+      "id": "winterbreak2",
+      "name": "WinterBreak2",
+      "priority": 80,
+      "kind": "stage",
+      "guide_url": "https://kindlemodding.org/jailbreaking/WinterBreak2/",
+      "summary": "Updated WinterBreak-family payload listed by the official model finder for many 5.x Kindles.",
+      "platforms": ["windows", "linux", "macos"],
+      "space_guard": "recommended",
+      "variants": [
+        {
+          "models": ["PW", "PWG", "PW2", "PW2J", "KV", "KT2", "BASIC", "PW3", "KOA", "KT3", "KOA2", "PW4", "KT4", "KOA3", "KOA3W32C", "PW5", "PW5SE", "KT5", "KS"],
+          "firmware": {"max": "5.18.0.2"},
+          "requirements": []
+        }
+      ],
+      "package": {
+        "url": "https://github.com/KindleModding/Winterbreak2/releases/download/v1.0.0/wb2.zip",
+        "filename": "wb2.zip",
+        "archive": "zip",
+        "sha256": "932ff113c414c9b0109b98d7f4b96da20815364fb4905e4483581b881b2ae2e2",
+        "mode": "stage_root"
+      },
+      "steps": [
+        "Open the official guide and confirm your exact firmware prerequisites.",
+        "Use the reversible OTA space guard if the guide calls for low free space.",
+        "Use Prepare Kindle to back up conflicts and stage all hidden and visible payload files.",
+        "Eject cleanly and complete the documented on-device trigger.",
+        "Return to Airplane mode after success."
+      ],
+      "post_note": "Follow the guide's current post-jailbreak stack; requirements may change faster than the desktop app."
+    },
+    {
+      "id": "winterbreak",
+      "name": "WinterBreak",
+      "priority": 75,
+      "kind": "stage",
+      "guide_url": "https://kindlemodding.org/jailbreaking/WinterBreak/",
+      "summary": "Broad software route for registered 5.x Kindles below firmware 5.18.1.",
+      "platforms": ["windows", "linux", "macos"],
+      "space_guard": "required",
+      "variants": [
+        {
+          "models": ["PW", "PWG", "PW2", "PW2J", "KV", "KT2", "BASIC", "PW3", "KOA", "KT3", "KOA2", "PW4", "KT4", "KOA3", "KOA3W32C", "PW5", "PW5SE", "KT5", "KS", "KT6", "PW6", "KS2", "CS"],
+          "firmware": {"max": "5.18.0.2"},
+          "requirements": [
+            {"key": "registered", "allowed": ["yes"], "label": "Kindle must be registered"}
+          ]
+        }
+      ],
+      "package": {
+        "url": "https://github.com/KindleModding/WinterBreak/releases/download/v2.1.0/WinterBreak.tar.gz",
+        "filename": "WinterBreak.tar.gz",
+        "archive": "tar.gz",
+        "sha256": "dc04fff5fcb685834cba9f9e95d4818b473d4100b2d40b8bb7c598ad09eb850d",
+        "mode": "stage_root"
+      },
+      "steps": [
+        "Register the Kindle and save a working Wi-Fi network.",
+        "Create the reversible OTA space guard so only 50-90 MB remains.",
+        "Enable Airplane mode, restart, connect by USB, and use Prepare Kindle.",
+        "Eject, open Store, allow the documented Wi-Fi step, and run WinterBreak.",
+        "Return to Airplane mode and install the hotfix."
+      ],
+      "post_note": "Install the official hotfix before normal use."
+    },
+    {
+      "id": "legacy-k2-k3",
+      "name": "NiLuJe K2 / DX / K3 jailbreak",
+      "priority": 45,
+      "kind": "guide",
+      "guide_url": "https://kindlemodding.org/jailbreaking/Legacy/",
+      "summary": "Generation-specific legacy package route maintained in the official archive.",
+      "platforms": ["windows", "linux", "macos"],
+      "space_guard": "optional",
+      "variants": [
+        {"models": ["K2", "DX", "K3", "K3G"], "firmware": {}, "requirements": []}
+      ],
+      "steps": ["Open the official legacy page and use the exact package for the device code and firmware."]
+    },
+    {
+      "id": "legacy-k4",
+      "name": "NiLuJe K4 jailbreak",
+      "priority": 45,
+      "kind": "guide",
+      "guide_url": "https://kindlemodding.org/jailbreaking/Legacy/",
+      "summary": "Official archived route for fourth/fifth-generation non-touch K4 variants.",
+      "platforms": ["windows", "linux", "macos"],
+      "space_guard": "optional",
+      "variants": [
+        {"models": ["K4", "K4S", "K4B"], "firmware": {}, "requirements": []}
+      ],
+      "steps": ["Open the official legacy page and select the package matching the exact K4 variant."]
+    },
+    {
+      "id": "legacy-k5",
+      "name": "K5 / Kindle Touch jailbreak",
+      "priority": 45,
+      "kind": "guide",
+      "guide_url": "https://kindlemodding.org/jailbreaking/Legacy/",
+      "summary": "Legacy route for Kindle Touch firmware 5.0.x through 5.4.4.2.",
+      "platforms": ["windows", "linux", "macos"],
+      "space_guard": "optional",
+      "variants": [
+        {"models": ["KT", "K5"], "firmware": {"min": "5.0.0", "max": "5.4.4.2"}, "requirements": []}
+      ],
+      "steps": ["Open the official legacy page and verify the exact firmware before installing any update package."]
+    },
+    {
+      "id": "popcorn",
+      "name": "Popcorn hardware jailbreak",
+      "priority": 20,
+      "kind": "hardware",
+      "guide_url": "https://kindlemodding.org/jailbreaking/Legacy/Popcorn/index.html",
+      "summary": "Hardware/serial route for selected older devices on any firmware. Electronics experience is required.",
+      "platforms": ["windows", "linux"],
+      "space_guard": "optional",
+      "variants": [
+        {"models": ["PW3", "KV", "KT2", "PW2", "KT3"], "firmware": {}, "requirements": []}
+      ],
+      "steps": ["This app does not operate serial pins or flash partitions. Follow the official hardware guide exactly."]
+    },
+    {
+      "id": "kindle-migu",
+      "name": "Kindle x Migu Android route",
+      "priority": 15,
+      "kind": "guide",
+      "guide_url": "https://kindlemodding.org/kindle-models",
+      "summary": "The Migu model runs Android and requires an Android-specific method rather than Kindle 5.x packages.",
+      "platforms": ["windows", "linux", "macos"],
+      "space_guard": "optional",
+      "variants": [
+        {"models": ["KM"], "firmware": {}, "requirements": []}
+      ],
+      "steps": ["Identify the Android build and use an Android method appropriate to that exact build."]
+    },
+    {
+      "id": "post-hotfix",
+      "name": "Universal Hotfix",
+      "priority": 0,
+      "kind": "post",
+      "hidden": true,
+      "guide_url": "https://kindlemodding.org/jailbreaking/post-jailbreak/setting-up-a-hotfix/",
+      "summary": "Official post-jailbreak persistence package.",
+      "platforms": ["windows", "linux", "macos"],
+      "variants": [],
+      "package": {
+        "url": "https://github.com/KindleModding/Hotfix/releases/download/2.5.0/Update_hotfix_universal.bin",
+        "filename": "Update_hotfix_universal.bin",
+        "archive": "file",
+        "sha256": "94d5c05254b70c4905392515411f620168ac238db62c7dcbc48a1e31d5de6c59",
+        "mode": "copy_file"
+      }
+    }
+  ],
+  "legacy_library": [
+    {"name": "LanguageBreak", "url": "https://kindlemodding.org/jailbreaking/Legacy/LanguageBreak/"},
+    {"name": "WatchThis", "url": "https://kindlemodding.org/jailbreaking/Legacy/WatchThis/"},
+    {"name": "Popcorn", "url": "https://kindlemodding.org/jailbreaking/Legacy/Popcorn/index.html"},
+    {"name": "NiLuJe K2/DX/DXG/K3", "url": "https://kindlemodding.org/jailbreaking/Legacy/"},
+    {"name": "NiLuJe K4", "url": "https://kindlemodding.org/jailbreaking/Legacy/"},
+    {"name": "K5 / Kindle Touch", "url": "https://kindlemodding.org/jailbreaking/Legacy/"},
+    {"name": "KindleBreak and recovery", "url": "https://kindlemodding.org/jailbreaking/Legacy/"}
+  ],
+  "fallback_models": [
+    {"amazon_name": "Kindle (1st Generation)", "nicknames": ["K1"], "last_firmware": "1.2.1", "jailbreak": "No maintained public method"},
+    {"amazon_name": "Kindle (2nd Generation)", "nicknames": ["K2"], "last_firmware": "2.5.8", "jailbreak": "NiLuJe K2/DX/DXG/K3"},
+    {"amazon_name": "Kindle DX (2nd Generation)", "nicknames": ["DX"], "last_firmware": "2.5.8", "jailbreak": "NiLuJe K2/DX/DXG/K3"},
+    {"amazon_name": "Kindle Keyboard (3rd Generation)", "nicknames": ["K3", "K3G"], "last_firmware": "3.4.3", "jailbreak": "NiLuJe K2/DX/DXG/K3"},
+    {"amazon_name": "Kindle (4th Generation)", "nicknames": ["K4", "K4S"], "last_firmware": "4.1.4", "jailbreak": "NiLuJe K4"},
+    {"amazon_name": "Kindle Touch (4th Generation)", "nicknames": ["KT", "K5"], "last_firmware": "5.3.7.3", "jailbreak": "K5 legacy"},
+    {"amazon_name": "Kindle Paperwhite (5th Generation)", "nicknames": ["PW", "PWG"], "last_firmware": "5.6.1.1", "jailbreak": "WinterBreak family"},
+    {"amazon_name": "Kindle (5th Generation)", "nicknames": ["K4", "K4B"], "last_firmware": "4.1.4", "jailbreak": "NiLuJe K4"},
+    {"amazon_name": "Kindle Paperwhite (6th Generation)", "nicknames": ["PW2", "PW2J"], "last_firmware": "5.12.2.2", "jailbreak": "WinterBreak family"},
+    {"amazon_name": "Kindle Voyage (7th Generation)", "nicknames": ["KV"], "last_firmware": "5.13.6", "jailbreak": "WinterBreak family"},
+    {"amazon_name": "Kindle (7th Generation)", "nicknames": ["KT2", "BASIC"], "last_firmware": "5.12.2.2", "jailbreak": "WinterBreak family"},
+    {"amazon_name": "Kindle Paperwhite (7th Generation)", "nicknames": ["PW3"], "last_firmware": "5.16.2.1.1", "jailbreak": "WinterBreak family"},
+    {"amazon_name": "Kindle Oasis (8th Generation)", "nicknames": ["KOA"], "last_firmware": "5.16.2.1.1", "jailbreak": "WinterBreak family"},
+    {"amazon_name": "Kindle (8th Generation)", "nicknames": ["KT3"], "last_firmware": "5.16.2.1.1", "jailbreak": "WinterBreak family"},
+    {"amazon_name": "Kindle x Migu", "nicknames": ["KM"], "last_firmware": "5.7.2.8", "jailbreak": "Android-specific"},
+    {"amazon_name": "Kindle Oasis (9th Generation)", "nicknames": ["KOA2"], "last_firmware": "5.16.2.1.1", "jailbreak": "WinterBreak family"},
+    {"amazon_name": "Kindle Paperwhite (10th Generation)", "nicknames": ["PW4"], "last_firmware": "Active", "jailbreak": "Automatic routing"},
+    {"amazon_name": "Kindle (10th Generation)", "nicknames": ["KT4"], "last_firmware": "Active", "jailbreak": "Automatic routing"},
+    {"amazon_name": "Kindle Oasis (10th Generation)", "nicknames": ["KOA3", "KOA3W32C"], "last_firmware": "5.18.2", "jailbreak": "Automatic routing"},
+    {"amazon_name": "Kindle Paperwhite (11th Generation)", "nicknames": ["PW5", "PW5SE"], "last_firmware": "Active", "jailbreak": "Automatic routing"},
+    {"amazon_name": "Kindle (11th Generation) - 2022", "nicknames": ["KT5"], "last_firmware": "Active", "jailbreak": "Automatic routing"},
+    {"amazon_name": "Kindle Scribe - 2022", "nicknames": ["KS"], "last_firmware": "Active", "jailbreak": "Automatic routing"},
+    {"amazon_name": "Kindle (11th Generation) - 2024", "nicknames": ["KT6"], "last_firmware": "Active", "jailbreak": "Automatic routing"},
+    {"amazon_name": "Kindle Paperwhite (12th Generation) - 2024", "nicknames": ["PW6"], "last_firmware": "Active", "jailbreak": "Automatic routing"},
+    {"amazon_name": "Kindle Scribe - 2024", "nicknames": ["KS2"], "last_firmware": "Active", "jailbreak": "Automatic routing"},
+    {"amazon_name": "Kindle Colorsoft (1st Generation)", "nicknames": ["CS"], "last_firmware": "Active", "jailbreak": "Automatic routing"},
+    {"amazon_name": "Kindle Scribe (3rd Generation)", "nicknames": ["KS3"], "last_firmware": "5.19.x", "jailbreak": "No public method"},
+    {"amazon_name": "Kindle Scribe Colorsoft (1st Generation)", "nicknames": ["KSC"], "last_firmware": "5.19.x", "jailbreak": "No public method"}
+  ]
+}
