@@ -23,7 +23,7 @@ from typing import Any, Callable, Iterable
 
 
 APP_NAME = "Kindle Jailbreak Assistant"
-APP_VERSION = "0.1.0"
+APP_VERSION = "0.1.1"
 USER_AGENT = f"LazyingArt-{APP_NAME.replace(' ', '-')}/{APP_VERSION}"
 MIB = 1024 * 1024
 
@@ -705,4 +705,3 @@ def method_by_id(catalog: dict[str, Any], method_id: str) -> dict[str, Any]:
         if method["id"] == method_id:
             return method
     raise AssistantError(f"Catalog method not found: {method_id}")
-
