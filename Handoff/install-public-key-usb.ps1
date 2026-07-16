@@ -21,7 +21,7 @@ if (-not $DriveRoot) {
     )
 
     if ($matches.Count -ne 1) {
-        throw "Connect the Kindle by USB, or pass -DriveRoot F:\ explicitly."
+        throw "Exit KOReader so Kindle storage can appear, connect by USB, or pass -DriveRoot F:\ explicitly. To keep KOReader open, use the app's no-password Wi-Fi pairing instead."
     }
     $DriveRoot = $matches[0]
 }

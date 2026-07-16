@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import concurrent.futures
+import ctypes
 import ipaddress
 import json
 import os
@@ -11,8 +12,10 @@ import socket
 import sys
 import threading
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
+from urllib.parse import urlsplit
 
 import paramiko
 import psutil
@@ -42,6 +45,7 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
+    QCheckBox,
     QFileDialog,
     QFrame,
     QGraphicsOpacityEffect,
@@ -62,7 +66,7 @@ from PySide6.QtWidgets import (
 
 
 APP_NAME = "Kindle Book Sender"
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.1.0"
 ORGANIZATION = "AgInTi Flow"
 WEBSITE = "https://lachlanchen.github.io/Kindle/"
 SSH_PORT = 2222
@@ -94,6 +98,108 @@ def human_size(byte_count: int) -> str:
             return f"{int(value)} {unit}" if unit == "B" else f"{value:.1f} {unit}"
         value /= 1024
     return f"{byte_count} B"
+
+
+@dataclass(frozen=True)
+class Endpoint:
+    host: str
+    port: int = SSH_PORT
+
+    @property
+    def display(self) -> str:
+        host = f"[{self.host}]" if ":" in self.host and not self.host.startswith("[") else self.host
+        return f"{host}:{self.port}"
+
+
+def parse_endpoint(value: str, default_port: int = SSH_PORT) -> Endpoint:
+    text = value.strip()
+    if not text:
+        raise ValueError("Enter a Kindle IP address or hostname.")
+
+    username = ""
+    host = ""
+    port = default_port
+    if "://" in text:
+        parsed = urlsplit(text)
+        if parsed.scheme.lower() != "ssh" or not parsed.hostname:
+            raise ValueError("Use an address such as 192.168.1.109, kindle.local, or ssh://root@host:2222.")
+        username = parsed.username or ""
+        host = parsed.hostname
+        try:
+            port = parsed.port or default_port
+        except ValueError as error:
+            raise ValueError("The SSH port must be a number from 1 to 65535.") from error
+    else:
+        if "@" in text:
+            username, text = text.rsplit("@", 1)
+        if text.startswith("["):
+            closing = text.find("]")
+            if closing < 0:
+                raise ValueError("An IPv6 address with a port must look like [fd00::26]:2222.")
+            host = text[1:closing]
+            remainder = text[closing + 1 :]
+            if remainder:
+                if not remainder.startswith(":") or not remainder[1:].isdigit():
+                    raise ValueError("An IPv6 address with a port must look like [fd00::26]:2222.")
+                port = int(remainder[1:])
+        else:
+            try:
+                ipaddress.ip_address(text.split("%", 1)[0])
+                host = text
+            except ValueError:
+                if text.count(":") == 1 and text.rsplit(":", 1)[1].isdigit():
+                    host, port_text = text.rsplit(":", 1)
+                    port = int(port_text)
+                else:
+                    host = text
+
+    if username and username.lower() != "root":
+        raise ValueError("KOReader SSH uses the root account. Use root@host or omit the username.")
+    host = host.strip().strip("[]")
+    if not host or any(character.isspace() for character in host):
+        raise ValueError("The Kindle address is empty or contains spaces.")
+    if not 1 <= int(port) <= 65535:
+        raise ValueError("The SSH port must be from 1 to 65535.")
+    return Endpoint(host, int(port))
+
+
+def probe_endpoint(endpoint: Endpoint, timeout: float = 0.8) -> tuple[bool, str]:
+    try:
+        with socket.create_connection((endpoint.host, endpoint.port), timeout=timeout):
+            return True, "SSH port is reachable"
+    except socket.gaierror:
+        return False, f"{endpoint.host} could not be resolved"
+    except ConnectionRefusedError:
+        return False, f"TCP {endpoint.port} is closed; stop and restart KOReader SSH"
+    except TimeoutError:
+        return False, (
+            f"TCP {endpoint.port} timed out; check the address, Wi-Fi client isolation, VPN, routing, and that KOReader SSH is running"
+        )
+    except OSError as error:
+        code = getattr(error, "winerror", None) or getattr(error, "errno", None)
+        if code in (10013, 13):
+            return False, f"Windows or security software blocked outbound TCP {endpoint.port}"
+        if code in (10051, 10065, 101, 113):
+            return False, f"Windows has no route to {endpoint.host}"
+        if code in (10061, 111, 61):
+            return False, f"TCP {endpoint.port} is closed; start KOReader SSH"
+        return False, f"TCP connection failed: {error}"
+
+
+def request_windows_firewall_rule(port: int) -> bool:
+    if platform.system() != "Windows":
+        return False
+    name = f"Kindle Book Sender SSH Outbound {port}"
+    script = (
+        f"$name='{name}'; "
+        "$rule=Get-NetFirewallRule -DisplayName $name -ErrorAction SilentlyContinue; "
+        "if(-not $rule){"
+        f"New-NetFirewallRule -DisplayName $name -Direction Outbound -Action Allow -Protocol TCP -RemotePort {port} -Profile Any | Out-Null"
+        "}"
+    )
+    arguments = f'-NoProfile -ExecutionPolicy Bypass -Command "{script}"'
+    result = ctypes.windll.shell32.ShellExecuteW(None, "runas", "powershell.exe", arguments, None, 1)
+    return int(result) > 32
 
 
 def make_app_icon(size: int = 128) -> QIcon:
@@ -281,15 +387,7 @@ def private_local_networks() -> list[ipaddress.IPv4Network]:
     return sorted(networks, key=lambda item: (int(item.network_address), item.prefixlen))
 
 
-def port_is_open(ip: str, port: int = SSH_PORT, timeout: float = 0.45) -> bool:
-    try:
-        with socket.create_connection((ip, port), timeout=timeout):
-            return True
-    except OSError:
-        return False
-
-
-def connect_ssh(ip: str, key: paramiko.RSAKey, timeout: float = 5.0) -> paramiko.SSHClient:
+def connect_ssh(endpoint: Endpoint, key: paramiko.RSAKey, timeout: float = 5.0) -> paramiko.SSHClient:
     last_error: Exception | None = None
     attempts = (
         None,
@@ -300,8 +398,8 @@ def connect_ssh(ip: str, key: paramiko.RSAKey, timeout: float = 5.0) -> paramiko
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         try:
             client.connect(
-                hostname=ip,
-                port=SSH_PORT,
+                hostname=endpoint.host,
+                port=endpoint.port,
                 username="root",
                 pkey=key,
                 timeout=timeout,
@@ -321,21 +419,113 @@ def connect_ssh(ip: str, key: paramiko.RSAKey, timeout: float = 5.0) -> paramiko
     raise RuntimeError("SSH connection failed")
 
 
-def verify_koreader(ip: str, key: paramiko.RSAKey) -> bool:
+def connect_ssh_without_password(endpoint: Endpoint, timeout: float = 5.0) -> paramiko.SSHClient:
+    sock: socket.socket | None = None
+    transport: paramiko.Transport | None = None
+    try:
+        sock = socket.create_connection((endpoint.host, endpoint.port), timeout=timeout)
+        transport = paramiko.Transport(sock)
+        transport.banner_timeout = timeout
+        transport.auth_timeout = timeout
+        transport.start_client(timeout=timeout)
+        allowed: list[str] = []
+        try:
+            transport.auth_none("root")
+        except paramiko.BadAuthenticationType as error:
+            allowed = list(error.allowed_types)
+        except paramiko.AuthenticationException:
+            pass
+        if not transport.is_authenticated() and (not allowed or "password" in allowed):
+            try:
+                transport.auth_password("root", "", fallback=False)
+            except paramiko.AuthenticationException:
+                pass
+        if not transport.is_authenticated():
+            raise paramiko.AuthenticationException(
+                "KOReader rejected login without a password. Stop SSH, enable 'Login without password (DANGEROUS)', then start SSH again."
+            )
+        transport.set_keepalive(20)
+        client = paramiko.SSHClient()
+        client._transport = transport
+        return client
+    except Exception:
+        if transport:
+            transport.close()
+        elif sock:
+            sock.close()
+        raise
+
+
+def verify_koreader_client(client: paramiko.SSHClient) -> bool:
+    _, stdout, _ = client.exec_command(
+        "test -d /mnt/us/koreader && printf __AGINTI_KOREADER_KINDLE__",
+        timeout=5,
+    )
+    output = stdout.read().decode("utf-8", errors="replace")
+    return stdout.channel.recv_exit_status() == 0 and "__AGINTI_KOREADER_KINDLE__" in output
+
+
+def install_public_key_over_ssh(endpoint: Endpoint, key_store: KeyStore) -> None:
     client: paramiko.SSHClient | None = None
     try:
-        client = connect_ssh(ip, key, timeout=3.5)
-        _, stdout, _ = client.exec_command(
-            "test -d /mnt/us/koreader && printf __AGINTI_KOREADER_KINDLE__",
-            timeout=4,
+        client = connect_ssh_without_password(endpoint, timeout=6)
+        if not verify_koreader_client(client):
+            raise RuntimeError(f"{endpoint.display} accepts SSH but is not a KOReader Kindle.")
+        public_line = shlex.quote(key_store.public_key_line)
+        ssh_directory = shlex.quote("/mnt/us/koreader/settings/SSH")
+        authorized_keys = shlex.quote("/mnt/us/koreader/settings/SSH/authorized_keys")
+        command = (
+            f"mkdir -p {ssh_directory} && touch {authorized_keys} && "
+            f"(grep -F -x -q {public_line} {authorized_keys} 2>/dev/null || "
+            f"printf '%s\\n' {public_line} >> {authorized_keys})"
         )
-        output = stdout.read().decode("utf-8", errors="replace")
-        return "__AGINTI_KOREADER_KINDLE__" in output
-    except Exception:
-        return False
+        _, stdout, stderr = client.exec_command(command, timeout=8)
+        if stdout.channel.recv_exit_status() != 0:
+            detail = stderr.read().decode("utf-8", errors="replace").strip()
+            raise RuntimeError(detail or "Could not install the app public key on the Kindle.")
     finally:
         if client:
             client.close()
+
+    verification: paramiko.SSHClient | None = None
+    try:
+        verification = connect_ssh(endpoint, key_store.load(), timeout=6)
+        if not verify_koreader_client(verification):
+            raise RuntimeError("The public key was written, but the endpoint is not a KOReader Kindle.")
+    except Exception as error:
+        raise RuntimeError(
+            "The public key was installed, but key login was not accepted yet. Stop and restart KOReader SSH, then connect again."
+        ) from error
+    finally:
+        if verification:
+            verification.close()
+
+
+def authenticate_koreader(endpoint: Endpoint, key_store: KeyStore, allow_no_password: bool) -> str:
+    reachable, detail = probe_endpoint(endpoint, timeout=1.2)
+    if not reachable:
+        raise RuntimeError(detail)
+    client: paramiko.SSHClient | None = None
+    key_error = ""
+    try:
+        client = connect_ssh(endpoint, key_store.load(), timeout=4.5)
+        if not verify_koreader_client(client):
+            raise RuntimeError(f"{endpoint.display} is an SSH server but not a KOReader Kindle.")
+        return "key"
+    except Exception as error:
+        key_error = str(error)
+    finally:
+        if client:
+            client.close()
+
+    if allow_no_password:
+        install_public_key_over_ssh(endpoint, key_store)
+        return "bootstrapped"
+    raise RuntimeError(
+        "SSH is reachable, but this computer's key is not authorized. "
+        "Enable the no-password checkbox for first-time pairing, or pair by USB. "
+        f"Technical detail: {key_error}"
+    )
 
 
 class WorkerSignals(QObject):
@@ -347,10 +537,16 @@ class WorkerSignals(QObject):
 
 
 class DiscoveryWorker(QRunnable):
-    def __init__(self, key_store: KeyStore, preferred_ip: str = "") -> None:
+    def __init__(
+        self,
+        key_store: KeyStore,
+        preferred_ip: str = "",
+        allow_no_password: bool = False,
+    ) -> None:
         super().__init__()
         self.key_store = key_store
         self.preferred_ip = preferred_ip.strip()
+        self.allow_no_password = allow_no_password
         self.signals = WorkerSignals()
         self.cancelled = threading.Event()
 
@@ -359,18 +555,27 @@ class DiscoveryWorker(QRunnable):
 
     def run(self) -> None:
         try:
-            key = self.key_store.load()
+            self.key_store.load()
+            preferred_endpoint: Endpoint | None = None
+            preferred_error = ""
             if self.preferred_ip:
                 try:
-                    ipaddress.ip_address(self.preferred_ip)
-                    self.signals.status.emit(f"Checking {self.preferred_ip}...")
-                    if port_is_open(self.preferred_ip, timeout=0.8) and verify_koreader(
-                        self.preferred_ip, key
-                    ):
-                        self.signals.result.emit({"ip": self.preferred_ip})
-                        return
-                except ValueError:
-                    pass
+                    preferred_endpoint = parse_endpoint(self.preferred_ip)
+                except ValueError as error:
+                    raise RuntimeError(f"The supplied Kindle address is invalid: {error}") from error
+                self.signals.status.emit(f"Testing the supplied address {preferred_endpoint.display} first...")
+                try:
+                    auth = authenticate_koreader(
+                        preferred_endpoint,
+                        self.key_store,
+                        self.allow_no_password,
+                    )
+                    self.signals.result.emit(
+                        {"ip": preferred_endpoint.display, "auth": auth, "supplied": True}
+                    )
+                    return
+                except Exception as error:
+                    preferred_error = str(error)
 
             networks = private_local_networks()
             if not networks:
@@ -378,48 +583,73 @@ class DiscoveryWorker(QRunnable):
                     "No private Wi-Fi or Ethernet network was found on this computer."
                 )
 
-            candidates: list[str] = []
+            candidates: list[Endpoint] = []
             seen: set[str] = set()
-            if self.preferred_ip:
-                seen.add(self.preferred_ip)
-            for network in networks[:4]:
+            if preferred_endpoint:
+                seen.add(preferred_endpoint.host)
+            for network in networks:
                 for host in network.hosts():
                     value = str(host)
                     if value not in seen:
                         seen.add(value)
-                        candidates.append(value)
+                        candidates.append(Endpoint(value, SSH_PORT))
 
             self.signals.status.emit(
-                "Searching the local network for KOReader. This normally takes a few seconds..."
+                f"Searching {len(networks)} active private network(s) for KOReader SSH..."
             )
-            open_hosts: list[str] = []
-            with concurrent.futures.ThreadPoolExecutor(max_workers=72) as executor:
-                futures = {executor.submit(port_is_open, ip): ip for ip in candidates}
+            open_hosts: list[Endpoint] = []
+            with concurrent.futures.ThreadPoolExecutor(max_workers=96) as executor:
+                futures = {
+                    executor.submit(probe_endpoint, endpoint, 0.55): endpoint
+                    for endpoint in candidates
+                }
                 for future in concurrent.futures.as_completed(futures):
                     if self.cancelled.is_set():
                         return
                     try:
-                        if future.result():
+                        if future.result()[0]:
                             open_hosts.append(futures[future])
                     except Exception:
                         continue
 
-            if self.preferred_ip in open_hosts:
-                open_hosts.remove(self.preferred_ip)
-                open_hosts.insert(0, self.preferred_ip)
-
-            for ip in open_hosts:
+            authentication_errors: list[str] = []
+            for endpoint in open_hosts:
                 if self.cancelled.is_set():
                     return
-                self.signals.status.emit(f"Checking a possible Kindle at {ip}...")
-                if verify_koreader(ip, key):
-                    self.signals.result.emit({"ip": ip})
+                self.signals.status.emit(f"Checking a possible Kindle at {endpoint.display}...")
+                try:
+                    auth = authenticate_koreader(
+                        endpoint,
+                        self.key_store,
+                        self.allow_no_password,
+                    )
+                    self.signals.result.emit(
+                        {"ip": endpoint.display, "auth": auth, "supplied": False}
+                    )
                     return
+                except Exception as error:
+                    authentication_errors.append(f"{endpoint.display}: {error}")
 
-            raise RuntimeError(
-                "No paired Kindle was found. Start KOReader SSH and use the same Wi-Fi. "
-                "For first use, connect the Kindle once by USB and click Pair over USB."
-            )
+            details: list[str] = []
+            if preferred_endpoint:
+                details.append(
+                    f"The supplied address {preferred_endpoint.display} was tested first: {preferred_error}"
+                )
+            if open_hosts:
+                details.append(
+                    f"Found {len(open_hosts)} SSH endpoint(s) locally, but none verified as this KOReader Kindle."
+                )
+            else:
+                details.append(
+                    "No local device answered on TCP 2222. Confirm KOReader SSH is started and the Wi-Fi does not isolate clients."
+                )
+            if authentication_errors:
+                details.append(authentication_errors[0])
+            if not self.allow_no_password:
+                details.append(
+                    "For a new computer, stop KOReader SSH, enable 'Login without password (DANGEROUS)', start SSH, check the app's no-password option, and connect again."
+                )
+            raise RuntimeError("\n\n".join(details))
         except Exception as error:
             self.signals.error.emit(str(error))
         finally:
@@ -429,7 +659,8 @@ class DiscoveryWorker(QRunnable):
 class TransferWorker(QRunnable):
     def __init__(self, ip: str, files: list[Path], key_store: KeyStore) -> None:
         super().__init__()
-        self.ip = ip
+        self.endpoint = parse_endpoint(ip)
+        self.ip = self.endpoint.display
         self.files = files
         self.key_store = key_store
         self.signals = WorkerSignals()
@@ -468,7 +699,7 @@ class TransferWorker(QRunnable):
             total_size = sum(path.stat().st_size for path in valid_files)
             key = self.key_store.load()
             self.signals.status.emit(f"Connecting securely to {self.ip}...")
-            client = connect_ssh(self.ip, key, timeout=6)
+            client = connect_ssh(self.endpoint, key, timeout=6)
 
             command = f"mkdir -p {shlex.quote(REMOTE_BOOK_DIRECTORY)}"
             _, stdout, stderr = client.exec_command(command, timeout=8)
@@ -664,8 +895,8 @@ class MainWindow(QMainWindow):
         headline.setObjectName("headline")
         hero_copy.addWidget(headline)
         description = QLabel(
-            "No IP hunting, no terminal commands. Pair once by USB, then the app "
-            "finds KOReader on your Wi-Fi and sends every selected book."
+            "No terminal commands. Pair over Wi-Fi with KOReader's no-password option, "
+            "or use USB when Kindle storage is available."
         )
         description.setWordWrap(True)
         description.setObjectName("heroDescription")
@@ -685,9 +916,9 @@ class MainWindow(QMainWindow):
         steps_title.setObjectName("cardTitle")
         steps_layout.addWidget(steps_title)
         for number, text in (
-            ("1", "Use the same Wi-Fi as this computer"),
+            ("1", "Use the same or another routed local network"),
             ("2", "Open KOReader"),
-            ("3", "Tools → SSH server → Start"),
+            ("3", "First use: allow no password, then start SSH"),
         ):
             row = QHBoxLayout()
             badge = QLabel(number)
@@ -705,35 +936,53 @@ class MainWindow(QMainWindow):
 
         device_card = QFrame()
         device_card.setObjectName("card")
-        device_layout = QHBoxLayout(device_card)
+        device_layout = QVBoxLayout(device_card)
         device_layout.setContentsMargins(22, 18, 22, 18)
         device_layout.setSpacing(15)
+        device_top = QHBoxLayout()
         device_info = QVBoxLayout()
         device_info.setSpacing(2)
         heading = QLabel("Your Kindle")
         heading.setObjectName("cardTitle")
         device_info.addWidget(heading)
         self.device_detail = QLabel(
-            "Connect once by USB for automatic pairing, or find a Kindle already paired with this app."
+            "Enter any reachable Kindle address, or leave it blank to scan every active private interface."
         )
         self.device_detail.setObjectName("muted")
         self.device_detail.setWordWrap(True)
         device_info.addWidget(self.device_detail)
-        device_layout.addLayout(device_info, 1)
+        device_top.addLayout(device_info, 1)
         self.manual_ip = QLineEdit()
-        self.manual_ip.setPlaceholderText("Optional IP address")
+        self.manual_ip.setPlaceholderText("IP, hostname, host:port, or [IPv6]:port")
         self.manual_ip.setText(self.settings.last_ip)
-        self.manual_ip.setMaximumWidth(180)
+        self.manual_ip.setMaximumWidth(270)
         self.manual_ip.setClearButtonEnabled(True)
-        device_layout.addWidget(self.manual_ip)
+        device_top.addWidget(self.manual_ip)
         self.usb_button = QPushButton("Pair over USB")
         self.usb_button.setObjectName("secondaryButton")
         self.usb_button.clicked.connect(self.pair_over_usb)
-        device_layout.addWidget(self.usb_button)
-        self.find_button = QPushButton("We're on the same Wi-Fi · Find my Kindle")
+        device_top.addWidget(self.usb_button)
+        self.find_button = QPushButton("Connect / find Kindle")
         self.find_button.setObjectName("primaryButton")
         self.find_button.clicked.connect(self.start_discovery)
-        device_layout.addWidget(self.find_button)
+        device_top.addWidget(self.find_button)
+        device_layout.addLayout(device_top)
+
+        connection_options = QHBoxLayout()
+        self.no_password_checkbox = QCheckBox(
+            "First connection: KOReader allows login without password"
+        )
+        self.no_password_checkbox.setToolTip(
+            "The app will use no-password access once, install this computer's public key, and verify key login. It will not disable the Kindle setting."
+        )
+        connection_options.addWidget(self.no_password_checkbox)
+        connection_options.addStretch(1)
+        self.firewall_button = QPushButton("Windows firewall help")
+        self.firewall_button.setObjectName("textButton")
+        self.firewall_button.setVisible(platform.system() == "Windows")
+        self.firewall_button.clicked.connect(self.firewall_help)
+        connection_options.addWidget(self.firewall_button)
+        device_layout.addLayout(connection_options)
         content_layout.addWidget(device_card)
 
         books_card = QFrame()
@@ -958,6 +1207,8 @@ class MainWindow(QMainWindow):
     def set_busy(self, busy: bool, message: str = "") -> None:
         self.find_button.setEnabled(not busy)
         self.usb_button.setEnabled(not busy)
+        self.no_password_checkbox.setEnabled(not busy)
+        self.firewall_button.setEnabled(not busy)
         self.send_button.setEnabled(
             not busy and bool(self.discovered_ip) and bool(self.selected_files)
         )
@@ -1007,9 +1258,10 @@ class MainWindow(QMainWindow):
             QMessageBox.information(
                 self,
                 "Connect the Kindle by USB",
-                "No mounted KOReader Kindle was found.\n\n"
-                "Connect it with a USB data cable, wait for its storage to appear, "
-                "then click Pair over USB again.",
+                "No mounted KOReader Kindle storage was found.\n\n"
+                "If KOReader is open, exit KOReader first. Then connect a USB data cable, "
+                "wait for the Kindle drive to appear, and click Pair over USB again.\n\n"
+                "To keep KOReader open, use Wi-Fi pairing with the no-password checkbox instead.",
             )
             return
         roots = ", ".join(str(root) for root in mounted)
@@ -1025,11 +1277,42 @@ class MainWindow(QMainWindow):
             "to the same Wi-Fi, open KOReader, and start Tools > SSH server.",
         )
 
+    def firewall_help(self) -> None:
+        port = SSH_PORT
+        supplied = self.manual_ip.text().strip()
+        if supplied:
+            try:
+                port = parse_endpoint(supplied).port
+            except ValueError as error:
+                QMessageBox.information(self, APP_NAME, str(error))
+                return
+        answer = QMessageBox.question(
+            self,
+            "Windows firewall help",
+            f"Kindle Book Sender is an outbound SSH client. Windows normally permits this without a rule.\n\n"
+            f"Create an explicit outbound allow rule for TCP port {port}? Windows will show a UAC administrator prompt.\n\n"
+            "This cannot fix guest-Wi-Fi/client isolation, a wrong address, VPN routing, or a stopped Kindle SSH server.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        if request_windows_firewall_rule(port):
+            self.operation_status.setText(
+                f"Windows requested an outbound TCP {port} firewall rule. Approve the UAC prompt, then connect again."
+            )
+        else:
+            QMessageBox.warning(self, APP_NAME, "Windows could not start the elevated firewall helper.")
+
     def start_discovery(self) -> None:
         if self.active_worker:
             return
         preferred = self.manual_ip.text().strip() or self.settings.last_ip
-        worker = DiscoveryWorker(self.key_store, preferred)
+        worker = DiscoveryWorker(
+            self.key_store,
+            preferred,
+            self.no_password_checkbox.isChecked(),
+        )
         worker.signals.status.connect(self.show_worker_status)
         worker.signals.result.connect(self.discovery_succeeded)
         worker.signals.error.connect(self.operation_failed)
@@ -1049,10 +1332,17 @@ class MainWindow(QMainWindow):
         self.discovered_ip = ip
         self.manual_ip.setText(ip)
         self.settings.last_ip = ip
-        self.primary_status.setText(f"Kindle connected · {ip}:{SSH_PORT}")
-        self.device_detail.setText(
-            "Verified with this app's private pairing key and the KOReader installation."
-        )
+        auth = str(result.get("auth", "key"))
+        self.primary_status.setText(f"Kindle connected - {ip}")
+        if auth == "bootstrapped":
+            self.device_detail.setText(
+                "Passwordless bootstrap succeeded. This computer's public key was installed and key login was verified."
+            )
+            self.no_password_checkbox.setChecked(False)
+        else:
+            self.device_detail.setText(
+                "Verified with this computer's private pairing key and the KOReader installation."
+            )
         self.operation_status.setText("Kindle found. Add books, then click Send books.")
 
     def choose_files(self) -> None:

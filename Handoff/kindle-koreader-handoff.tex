@@ -241,30 +241,33 @@ For a layperson, the easiest method is the free Kindle Book Sender desktop app:
 \end{center}
 
 The website automatically recommends the correct download for Windows, Ubuntu/Linux, or macOS. The app removes the need to find an IP address, type SSH commands, or choose between SFTP and SCP.
-
-\subsection{One-time pairing}
+\subsection{Recommended first connection: no-password Wi-Fi bootstrap}
 
 \begin{enumerate}
   \item Download and open Kindle Book Sender from the website.
-  \item Connect the running-KOReader Kindle to the computer with a USB data cable.
-  \item The app recognizes a drive containing both \texttt{documents} and \texttt{koreader}.
-  \item It creates a new RSA key for that computer and installs only its public key on the Kindle.
-  \item Safely eject and unplug the Kindle.
+  \item In KOReader, stop SSH if it is already running, enable \textbf{Login without password (DANGEROUS)}, then start SSH again.
+  \item Enter the address and port displayed by KOReader, such as \texttt{192.168.5.26:2222}. A hostname, IPv6 address, or another routed private subnet also works.
+  \item Check \textbf{First connection: KOReader allows login without password}, then click \textbf{Connect / find Kindle}.
+  \item The app creates a new RSA key for that computer, connects without a password once, installs only its public key, and verifies a second connection with the key.
 \end{enumerate}
 
-The app-generated private key stays in that computer's user application-data folder. It is separate from the handoff key embedded later in this PDF and is never included in public downloads.
+The app-generated private key stays in that computer's user application-data folder. A new computer can repeat the no-password bootstrap without installing Python, SSH tools, or a key manually. The app does not disable KOReader's no-password option; leaving it enabled is convenient but allows any reachable client to attempt root access.
+
+\subsection{USB pairing fallback}
+
+Exit KOReader first so the Kindle drive can appear. Connect USB, click \textbf{Pair over USB}, safely eject, reopen KOReader, and start SSH. If KOReader remains open and the drive does not appear, use no-password Wi-Fi bootstrap instead; USB alone cannot modify storage that the Kindle has not exported to the computer.
 
 \subsection{Every wireless transfer after pairing}
 
 \begin{enumerate}
-  \item Put the Kindle and computer on the same trusted Wi-Fi.
+  \item Put the Kindle and computer on the same trusted Wi-Fi, or on networks that can route to each other.
   \item Open KOReader, then start \textbf{Tools > SSH server}.
-  \item In the app, click \textbf{We're on the same Wi-Fi -- Find my Kindle}.
+  \item In the app, click \textbf{Connect / find Kindle}.
   \item Drag books into the app or choose them with the file picker.
   \item Click \textbf{Send books}.
 \end{enumerate}
 
-The app checks the previously verified address first, then scans only active private local networks on port 2222. A candidate is accepted only after key authentication and confirmation that \path{/mnt/us/koreader} exists. Books are placed in \path{/mnt/us/documents/Books}; SFTP is used when available and SCP is selected automatically as a fallback.
+The app always tests a supplied address first, including hostname, IPv4, IPv6, custom port, and routed subnet addresses. It then scans every active private IPv4 interface as a fallback. A candidate is accepted only after authentication and confirmation that \path{/mnt/us/koreader} exists. Failures distinguish DNS, routing, closed port, timeout, passwordless rejection, and key rejection. Books are placed in \path{/mnt/us/documents/Books}; SFTP is used when available and SCP is selected automatically as a fallback.
 
 \subsection{Platform notes}
 
@@ -274,7 +277,7 @@ The app checks the previously verified address first, then scans only active pri
   \item \textbf{macOS}: choose Apple Silicon or Intel on the website. Because the community build is not notarized, Control-click the app and choose \textbf{Open} the first time.
 \end{itemize}
 
-If automatic discovery does not succeed, repeat USB pairing, confirm the same Wi-Fi and running KOReader SSH, or enter the Kindle IP in the optional address field. The manual SSH method below remains available for diagnosis and recovery.
+If discovery does not succeed, enter the exact address shown when KOReader SSH starts. Guest Wi-Fi and access-point client isolation can block two devices even when the Wi-Fi name is identical. On Windows, the app can request a UAC-approved outbound firewall rule, but that rule cannot repair router isolation or a missing route.
 
 \section{Send books over Wi-Fi with SSH}
 
@@ -460,7 +463,7 @@ Passphrase & None, for simple appliance-style access \\
 \bottomrule
 \end{longtable}
 
-The public key is in KOReader's SSH authorization file. The private key is not a default Windows SSH key; supplied commands select it explicitly with \texttt{-i}.
+The public key must be present in KOReader's SSH authorization file before this handoff key can connect. Verify it or run the included USB installer. The private key is not a default Windows SSH key; supplied commands select it explicitly with \texttt{-i}.
 
 \subsection{Important warning}
 

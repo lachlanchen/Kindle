@@ -185,7 +185,7 @@ KOReader SSH：端口 2222 · 用户 root
 \begin{itemize}
   \item KOReader 已安装，可以阅读 PDF、EPUB、MOBI、DJVU、CBZ、DOCX、TXT 等格式。
   \item 五本 LinguaLeaf 黑白版 PDF 已放入 Kindle 的 \texttt{documents} 目录。
-  \item KOReader 的 SSH 公钥已经安装。
+  \item 交接用 SSH 公钥文件已经提供；实际连接前应验证它是否已加入 Kindle。
   \item 当前示例 IP 是 \texttt{192.168.1.109}，但路由器以后可能会分配不同地址。
   \item \textbf{KOReader 自动启动目前故意关闭。} Kindle 顶层存储中保留了 \texttt{DISABLE\_KOREADER\_AUTOSTART} 安全标记，因此重启后会进入亚马逊原生界面。
 \end{itemize}
@@ -289,29 +289,33 @@ KOReader 经常在书籍旁边建立名称以 \texttt{.sdr} 结尾的文件夹�
 
 网站会根据当前电脑推荐 Windows、Ubuntu/Linux 或 macOS 下载。应用会自动处理 IP 地址、SSH 密钥、SFTP 与 SCP，因此用户不需要输入终端命令。
 
-\subsection{第一次使用：USB 自动配对}
+\subsection{推荐的第一次连接：Wi-Fi 无密码引导配对}
 
 \begin{enumerate}
   \item 从网站下载并打开 Kindle Book Sender。
-  \item 用 USB 数据线连接已经安装 KOReader 的 Kindle。
-  \item 应用会识别同时含有 \texttt{documents} 和 \texttt{koreader} 的 Kindle 驱动器。
-  \item 应用为这台电脑建立一把新的 RSA 密钥，并且只把公钥加入 Kindle。
-  \item 在系统中安全弹出 Kindle，然后拔掉数据线。
+  \item 如果 KOReader SSH 已经运行，先停止；启用 \textbf{无密码登录（危险）}，再重新启动 SSH。
+  \item 输入 KOReader 显示的地址与端口，例如 \texttt{192.168.5.26:2222}。主机名、IPv6、自定义端口或可路由的另一私有网段也可以使用。
+  \item 勾选 \textbf{第一次连接：KOReader 允许无密码登录}，然后点击 \textbf{连接 / 查找 Kindle}。
+  \item 应用为这台电脑生成 RSA 私钥，使用无密码方式连接一次，只把公钥写入 Kindle，并再次验证密钥登录。
 \end{enumerate}
 
-应用生成的私钥只保存在当前电脑的用户应用数据目录。它与本 PDF 后面嵌入的交接私钥相互独立，也不会包含在公开下载的软件中。
+应用生成的私钥只保存在当前电脑的用户应用数据目录。新电脑无需预装 Python、SSH 工具或手工密钥，只需再次进行无密码引导。应用不会关闭 Kindle 的无密码选项；长期保持该选项虽然方便，但局域网内任何可达设备都可能尝试 root 登录。
+
+\subsection{USB 配对备用方法}
+
+先退出 KOReader，让 Kindle 驱动器能够出现在电脑上；连接 USB，点击 \textbf{通过 USB 配对}，安全弹出后重新打开 KOReader 并启动 SSH。若保持 KOReader 运行而电脑看不到驱动器，请改用无密码 Wi-Fi 引导；Kindle 没有向电脑导出存储时，USB 本身无法写入公钥。
 
 \subsection{以后每次无线传书}
 
 \begin{enumerate}
-  \item 让 Kindle 和电脑连接同一个可信 Wi-Fi。
+  \item 让 Kindle 和电脑连接同一个可信 Wi-Fi，或者连接能够互相路由的网络。
   \item 打开 KOReader，然后启动 \textbf{工具 > SSH 服务器}。
-  \item 在应用中点击 \textbf{我们在同一个 Wi-Fi -- 查找我的 Kindle}。
+  \item 在应用中点击 \textbf{连接 / 查找 Kindle}。
   \item 将书拖进窗口，或者点击按钮选择书籍。
   \item 点击 \textbf{发送书籍}。
 \end{enumerate}
 
-应用首先检查上一次成功连接的地址，然后只扫描本机正在使用的私有局域网和 2222 端口。候选设备必须通过专用密钥认证，并确认存在 \path{/mnt/us/koreader} 后才会显示为 Kindle。书籍会放入 \path{/mnt/us/documents/Books}；支持 SFTP 时优先使用，否则自动改用 SCP。
+应用一定先测试用户填写的地址，支持主机名、IPv4、IPv6、自定义端口和可路由的其他网段，然后才把所有本机私有 IPv4 接口扫描作为备用。错误会分别说明 DNS、路由、端口关闭、超时、无密码被拒绝或密钥被拒绝。候选设备必须确认存在 \path{/mnt/us/koreader} 后才会显示为 Kindle。书籍会放入 \path{/mnt/us/documents/Books}；支持 SFTP 时优先使用，否则自动改用 SCP。
 
 \subsection{不同系统的提示}
 
@@ -321,7 +325,7 @@ KOReader 经常在书籍旁边建立名称以 \texttt{.sdr} 结尾的文件夹�
   \item \textbf{macOS}：在网站选择 Apple Silicon 或 Intel。由于社区版本没有 Apple 公证，第一次请按住 Control 点击应用，再选择 \textbf{打开}。
 \end{itemize}
 
-若自动发现失败，请重新进行 USB 配对，确认两台设备使用同一个 Wi-Fi 并已经启动 KOReader SSH，也可以在可选输入框中填写 Kindle IP。下面的手动 SSH 方法仍可用于诊断和恢复。
+若自动发现失败，请填写 KOReader 启动 SSH 时显示的完整地址。访客 Wi-Fi 或接入点客户端隔离会让使用同一 Wi-Fi 名称的两台设备仍然无法互访。Windows 应用可以通过 UAC 请求添加出站防火墙规则，但该规则无法修复路由器隔离或不存在的路由。
 
 \section{通过 Wi-Fi 无线传书}
 
@@ -553,7 +557,7 @@ ENABLE_KOREADER_AUTOSTART
 \bottomrule
 \end{longtable}
 
-公钥已经加入 Kindle。私钥没有被设置成 Windows 的默认 SSH 密钥，所有命令都通过 \texttt{-i} 明确指定它。
+使用这把交接私钥之前，必须确认对应公钥已经加入 Kindle；可运行随附的 USB 安装脚本。私钥没有被设置成 Windows 的默认 SSH 密钥，所有命令都通过 \texttt{-i} 明确指定它。
 
 \begin{warningbox}
 \textbf{本 PDF 按设备所有者要求，故意嵌入了完整私钥。此密钥只能用于这一台 Kindle。}

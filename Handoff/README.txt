@@ -20,7 +20,7 @@ Contents:
   ssh-config.example               Optional SSH alias template
   build-guide.ps1                  Rebuild the PDF
   keys\kindle_handoff_rsa          PRIVATE Kindle-only key
-  keys\kindle_handoff_rsa.pub      Public key installed on Kindle
+  keys\kindle_handoff_rsa.pub      Public key to authorize on Kindle
 
 SECURITY WARNING
 ----------------
@@ -35,6 +35,12 @@ Quick SSH:
 
 Quick wireless transfer:
   powershell -ExecutionPolicy Bypass -File .\send-books-to-kindle.ps1 -KindleIp 192.168.1.109 "C:\Books\Example.pdf"
+
+New-computer pairing:
+  In KOReader, stop SSH, enable Login without password, and start SSH again.
+  In Kindle Book Sender, enter the displayed address, check the no-password
+  first-connection option, and connect. The app installs and verifies its own
+  per-computer public key automatically.
 
 Rebuild:
   powershell -ExecutionPolicy Bypass -File .\build-guide.ps1
