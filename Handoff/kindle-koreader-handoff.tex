@@ -237,7 +237,11 @@ KOReader commonly stores per-book progress, highlights, notes, and settings in a
 For a layperson, the easiest method is the free Kindle Book Sender desktop app:
 
 \begin{center}
-\href{https://lachlanchen.github.io/Kindle/}{\textbf{https://lachlanchen.github.io/Kindle/}}
+\href{https://lazying.art/eink}{\textbf{https://lazying.art/eink}}
+
+Latest application downloads: \url{https://github.com/lachlanchen/Kindle/releases/latest}
+
+Original project website without redirection: \url{https://lachlanchen.github.io/Kindle/?stay=1}
 \end{center}
 
 The website automatically recommends the correct download for Windows, Ubuntu/Linux, or macOS. The app removes the need to find an IP address, type SSH commands, or choose between SFTP and SCP.
@@ -278,6 +282,28 @@ The app always tests a supplied address first, including hostname, IPv4, IPv6, c
 \end{itemize}
 
 If discovery does not succeed, enter the exact address shown when KOReader SSH starts. Guest Wi-Fi and access-point client isolation can block two devices even when the Wi-Fi name is identical. On Windows, the app can request a UAC-approved outbound firewall rule, but that rule cannot repair router isolation or a missing route.
+
+\section{Kindle Book Sender 1.3}
+
+The desktop sender is available for Windows, macOS, and Linux. Version 1.3 adds an
+11-language interface, automatic locale selection, a maximized responsive layout,
+Kindle storage usage, remembered Kindle addresses, the last book folder, and a
+persistent recent-transfer history.
+
+On Windows, the packaged application maintains a per-user installed copy under
+\path{%LOCALAPPDATA%/Programs/LazyingArt/Kindle Book Sender} and creates a Start
+menu shortcut without administrator access. Use \textbf{Add to Start} or
+\textbf{Add to taskbar} inside the application when needed. Windows 11 may block
+automatic taskbar pinning; if so, right-click the running icon and choose
+\textbf{Pin to taskbar}.
+
+The \textbf{Guide \& downloads} button opens \url{https://lazying.art/eink}.
+The English and Simplified Chinese printable guides remain available directly at:
+
+\begin{itemize}
+  \item \url{https://lachlanchen.github.io/Kindle/downloads/kindle-koreader-handoff.pdf}
+  \item \url{https://lachlanchen.github.io/Kindle/downloads/kindle-koreader-handoff-zh-CN.pdf}
+\end{itemize}
 
 \section{Send books over Wi-Fi with SSH}
 

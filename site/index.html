@@ -1,6 +1,22 @@
 <!doctype html>
 <html lang="en">
 <head>
+  <script>
+    window.KINDLE_SITE_REDIRECT = Object.freeze({
+      enabled: true,
+      target: "https://lazying.art/eink",
+      bypassParameter: "stay"
+    });
+    (function redirectToLazyingArt() {
+      var config = window.KINDLE_SITE_REDIRECT;
+      var query = new URLSearchParams(window.location.search);
+      if (!config.enabled || query.get(config.bypassParameter) === "1") return;
+      var target = new URL(config.target, window.location.href);
+      if (window.location.hash) target.hash = window.location.hash;
+      window.location.replace(target.href);
+    })();
+  </script>
+  <noscript><meta http-equiv="refresh" content="0;url=https://lazying.art/eink"></noscript>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f3eddf">

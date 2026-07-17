@@ -23,16 +23,17 @@ def create_icon() -> Path:
         radius=210,
         fill="#073C32",
     )
-    draw.rounded_rectangle(
-        (270, 190, 754, 818),
-        radius=56,
-        fill="#FBFAF6",
-    )
-    for y in (350, 450, 550):
-        draw.line((360, y, 664, y), fill="#0D5C4B", width=30)
-    draw.line((390, 700, 635, 700), fill="#D78A2A", width=45)
-    draw.line((570, 635, 635, 700), fill="#D78A2A", width=45)
-    draw.line((570, 765, 635, 700), fill="#D78A2A", width=45)
+    draw.ellipse((280, 190, 460, 370), fill="#17201C")
+    draw.ellipse((564, 190, 744, 370), fill="#17201C")
+    draw.rounded_rectangle((242, 165, 782, 850), radius=62, fill="#FBFAF6")
+    draw.ellipse((330, 305, 465, 410), fill="#17201C")
+    draw.ellipse((559, 305, 694, 410), fill="#17201C")
+    draw.ellipse((479, 414, 545, 462), fill="#17201C")
+    draw.line((355, 566, 669, 566), fill="#0D5C4B", width=28)
+    draw.line((355, 650, 585, 650), fill="#0D5C4B", width=28)
+    draw.line((385, 752, 640, 752), fill="#D78A2A", width=46)
+    draw.line((575, 686, 640, 752), fill="#D78A2A", width=46)
+    draw.line((575, 818, 640, 752), fill="#D78A2A", width=46)
 
     system = platform.system()
     if system == "Windows":

@@ -5,8 +5,15 @@ Prepared by AgInTi Flow, LazyingArt LLC
 https://flow.lazying.art
 https://lazying.art
 
-Recommended app and downloads:
-  https://lachlanchen.github.io/Kindle/
+Recommended app, product page, and guides:
+  https://lazying.art/eink
+  https://github.com/lachlanchen/Kindle/releases/latest
+  https://lachlanchen.github.io/Kindle/?stay=1  (original site, no redirect)
+
+Kindle Book Sender 1.3 remembers devices and transfer history, displays Kindle
+storage usage, supports 11 interface languages, starts maximized, and adapts to
+smaller windows. The packaged Windows app can add itself to Start and request a
+taskbar pin without administrator access.
 
 Start with:
   kindle-koreader-handoff.pdf
