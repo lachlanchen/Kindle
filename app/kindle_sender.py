@@ -77,7 +77,7 @@ except ImportError:
 
 
 APP_NAME = "Kindle Book Sender"
-APP_VERSION = "1.3.0"
+APP_VERSION = "1.3.1"
 ORGANIZATION = "AgInTi Flow"
 WEBSITE = "https://lazying.art/eink"
 SSH_PORT = 2222
@@ -1067,7 +1067,7 @@ class MainWindow(QMainWindow):
         outer.setSpacing(18)
 
         content = QWidget()
-        content.setMaximumWidth(1080)
+        content.setMaximumWidth(1240)
         content_layout = QVBoxLayout(content)
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(18)
@@ -1075,13 +1075,16 @@ class MainWindow(QMainWindow):
 
         header = QFrame()
         header.setObjectName("header")
-        header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(0, 2, 0, 4)
+        header_layout = QVBoxLayout(header)
+        header_layout.setContentsMargins(0, 2, 0, 6)
+        header_layout.setSpacing(10)
+        identity_row = QHBoxLayout()
+        identity_row.setSpacing(11)
         mark = QLabel("K")
         mark.setObjectName("mark")
         mark.setFixedSize(42, 42)
         mark.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        header_layout.addWidget(mark)
+        identity_row.addWidget(mark)
         brand_box = QVBoxLayout()
         brand_box.setSpacing(0)
         brand = QLabel(APP_NAME)
@@ -1089,29 +1092,39 @@ class MainWindow(QMainWindow):
         brand_box.addWidget(brand)
         byline = QLabel("by AgInTi Flow · LazyingArt LLC")
         byline.setObjectName("muted")
+        byline.setWordWrap(True)
         brand_box.addWidget(byline)
-        header_layout.addLayout(brand_box)
-        header_layout.addStretch(1)
+        identity_row.addLayout(brand_box)
+        identity_row.addStretch(1)
+        header_layout.addLayout(identity_row)
+
+        header_actions = QHBoxLayout()
+        header_actions.setSpacing(10)
+        header_actions.addStretch(1)
         self.language_select = QComboBox()
         self.language_select.setObjectName("languageSelect")
-        self.language_select.setMinimumWidth(132)
+        self.language_select.setMinimumWidth(190)
+        self.language_select.setMaximumWidth(250)
+        self.language_select.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         for code, native_name in LANGUAGES:
             self.language_select.addItem(native_name, code)
         selected_index = self.language_select.findData(self.language)
         self.language_select.setCurrentIndex(max(0, selected_index))
         self.language_select.currentIndexChanged.connect(self.change_language)
-        header_layout.addWidget(self.language_select)
+        header_actions.addWidget(self.language_select)
         website_button = self.localized(QPushButton(), "guide_downloads")
         website_button.setObjectName("ghostButton")
+        website_button.setMinimumWidth(190)
         website_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(WEBSITE)))
-        header_layout.addWidget(website_button)
+        header_actions.addWidget(website_button)
+        header_layout.addLayout(header_actions)
         content_layout.addWidget(header)
 
         hero = QFrame()
         hero.setObjectName("hero")
         self.hero_layout = QHBoxLayout(hero)
-        self.hero_layout.setContentsMargins(30, 28, 30, 28)
-        self.hero_layout.setSpacing(34)
+        self.hero_layout.setContentsMargins(34, 30, 34, 30)
+        self.hero_layout.setSpacing(24)
         hero_copy = QVBoxLayout()
         hero_copy.setSpacing(9)
         eyebrow = self.localized(QLabel(), "hero_eyebrow")
@@ -1129,10 +1142,11 @@ class MainWindow(QMainWindow):
         self.primary_status.setObjectName("statusPill")
         self.primary_status.setWordWrap(True)
         hero_copy.addWidget(self.primary_status, 0, Qt.AlignmentFlag.AlignLeft)
-        self.hero_layout.addLayout(hero_copy, 3)
+        self.hero_layout.addLayout(hero_copy, 5)
 
         steps = QFrame()
         steps.setObjectName("steps")
+        steps.setMinimumWidth(320)
         steps_layout = QVBoxLayout(steps)
         steps_layout.setContentsMargins(20, 18, 20, 18)
         steps_layout.setSpacing(10)
@@ -1155,7 +1169,7 @@ class MainWindow(QMainWindow):
             label.setObjectName("stepText")
             row.addWidget(label, 1)
             steps_layout.addLayout(row)
-        self.hero_layout.addWidget(steps, 2)
+        self.hero_layout.addWidget(steps, 3)
         content_layout.addWidget(hero)
 
         device_card = QFrame()
@@ -1469,8 +1483,9 @@ class MainWindow(QMainWindow):
             }
             QLineEdit:focus { border: 1px solid #0D5C4B; background: #FFFFFF; }
             QComboBox#languageSelect {
-                min-height: 34px; padding: 0 10px; background: #FBFAF6;
+                min-height: 38px; padding: 0 12px; background: #FBFAF6;
                 border: 1px solid #D3D7D4; border-radius: 9px; color: #17201C;
+                font-size: 12px;
             }
             QComboBox#languageSelect:hover { border-color: #0D5C4B; }
             QComboBox#addressBox {
@@ -1926,8 +1941,8 @@ class MainWindow(QMainWindow):
         self.set_localized_text(self.operation_status, "cancelling")
 
     def resizeEvent(self, event) -> None:
-        compact = event.size().width() < 980
-        narrow = event.size().width() < 790
+        compact = event.size().width() < 1180
+        narrow = event.size().width() < 860
         horizontal = QBoxLayout.Direction.LeftToRight
         vertical = QBoxLayout.Direction.TopToBottom
         self.hero_layout.setDirection(vertical if compact else horizontal)
