@@ -64,6 +64,7 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
@@ -77,7 +78,7 @@ except ImportError:
 
 
 APP_NAME = "Kindle Book Sender"
-APP_VERSION = "1.3.1"
+APP_VERSION = "1.3.2"
 ORGANIZATION = "AgInTi Flow"
 WEBSITE = "https://lazying.art/eink"
 SSH_PORT = 2222
@@ -1055,19 +1056,21 @@ class MainWindow(QMainWindow):
         widget.setText(tr(key, **values))
 
     def build_ui(self) -> None:
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self.setCentralWidget(scroll)
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setCentralWidget(self.scroll)
         canvas = QWidget()
         canvas.setObjectName("canvas")
-        scroll.setWidget(canvas)
+        self.scroll.setWidget(canvas)
         outer = QVBoxLayout(canvas)
         outer.setContentsMargins(28, 20, 28, 28)
         outer.setSpacing(18)
 
-        content = QWidget()
-        content.setMaximumWidth(1240)
+        self.content = QWidget()
+        content = self.content
+        content.setMaximumWidth(1400)
         content_layout = QVBoxLayout(content)
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(18)
@@ -1075,9 +1078,10 @@ class MainWindow(QMainWindow):
 
         header = QFrame()
         header.setObjectName("header")
-        header_layout = QVBoxLayout(header)
+        self.header_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight, header)
+        header_layout = self.header_layout
         header_layout.setContentsMargins(0, 2, 0, 6)
-        header_layout.setSpacing(10)
+        header_layout.setSpacing(18)
         identity_row = QHBoxLayout()
         identity_row.setSpacing(11)
         mark = QLabel("K")
@@ -1086,25 +1090,27 @@ class MainWindow(QMainWindow):
         mark.setAlignment(Qt.AlignmentFlag.AlignCenter)
         identity_row.addWidget(mark)
         brand_box = QVBoxLayout()
-        brand_box.setSpacing(0)
+        brand_box.setSpacing(2)
         brand = QLabel(APP_NAME)
         brand.setObjectName("brand")
+        brand.setMinimumHeight(25)
         brand_box.addWidget(brand)
         byline = QLabel("by AgInTi Flow · LazyingArt LLC")
         byline.setObjectName("muted")
         byline.setWordWrap(True)
+        byline.setMinimumHeight(18)
         brand_box.addWidget(byline)
         identity_row.addLayout(brand_box)
         identity_row.addStretch(1)
-        header_layout.addLayout(identity_row)
+        header_layout.addLayout(identity_row, 1)
 
-        header_actions = QHBoxLayout()
+        self.header_actions = QBoxLayout(QBoxLayout.Direction.LeftToRight)
+        header_actions = self.header_actions
         header_actions.setSpacing(10)
-        header_actions.addStretch(1)
         self.language_select = QComboBox()
         self.language_select.setObjectName("languageSelect")
-        self.language_select.setMinimumWidth(190)
-        self.language_select.setMaximumWidth(250)
+        self.language_select.setMinimumWidth(210)
+        self.language_select.setMaximumWidth(280)
         self.language_select.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         for code, native_name in LANGUAGES:
             self.language_select.addItem(native_name, code)
@@ -1112,12 +1118,14 @@ class MainWindow(QMainWindow):
         self.language_select.setCurrentIndex(max(0, selected_index))
         self.language_select.currentIndexChanged.connect(self.change_language)
         header_actions.addWidget(self.language_select)
-        website_button = self.localized(QPushButton(), "guide_downloads")
-        website_button.setObjectName("ghostButton")
-        website_button.setMinimumWidth(190)
-        website_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(WEBSITE)))
-        header_actions.addWidget(website_button)
-        header_layout.addLayout(header_actions)
+        self.website_button = self.localized(QPushButton(), "guide_downloads")
+        self.website_button.setObjectName("ghostButton")
+        self.website_button.setMinimumWidth(210)
+        self.website_button.setMaximumWidth(280)
+        self.website_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(WEBSITE)))
+        header_actions.addWidget(self.website_button)
+        header_actions.addStretch(1)
+        header_layout.addLayout(header_actions, 0)
         content_layout.addWidget(header)
 
         hero = QFrame()
@@ -1133,10 +1141,14 @@ class MainWindow(QMainWindow):
         headline = self.localized(QLabel(), "hero_title")
         headline.setWordWrap(True)
         headline.setObjectName("headline")
+        headline.setMinimumHeight(46)
+        headline.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding)
+        self.headline = headline
         hero_copy.addWidget(headline)
         description = self.localized(QLabel(), "hero_description")
         description.setWordWrap(True)
         description.setObjectName("heroDescription")
+        description.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding)
         hero_copy.addWidget(description)
         self.primary_status = self.localized(QLabel(), "preparing_key")
         self.primary_status.setObjectName("statusPill")
@@ -1146,7 +1158,8 @@ class MainWindow(QMainWindow):
 
         steps = QFrame()
         steps.setObjectName("steps")
-        steps.setMinimumWidth(320)
+        steps.setMinimumWidth(360)
+        self.steps_panel = steps
         steps_layout = QVBoxLayout(steps)
         steps_layout.setContentsMargins(20, 18, 20, 18)
         steps_layout.setSpacing(10)
@@ -1193,7 +1206,8 @@ class MainWindow(QMainWindow):
         self.manual_ip.setEditable(True)
         self.manual_ip.addItems(self.settings.recent_addresses)
         self.manual_ip.setEditText(self.settings.last_ip)
-        self.manual_ip.setMaximumWidth(310)
+        self.manual_ip.setMinimumWidth(260)
+        self.manual_ip.setMaximumWidth(360)
         if self.manual_ip.lineEdit():
             self.manual_ip.lineEdit().setClearButtonEnabled(True)
         self.device_top_layout.addWidget(self.manual_ip)
@@ -1225,7 +1239,8 @@ class MainWindow(QMainWindow):
         storage_layout = QVBoxLayout(storage_panel)
         storage_layout.setContentsMargins(14, 11, 14, 11)
         storage_layout.setSpacing(7)
-        storage_top = QHBoxLayout()
+        self.storage_top_layout = QHBoxLayout()
+        storage_top = self.storage_top_layout
         storage_title = self.localized(QLabel(), "storage")
         storage_title.setObjectName("storageTitle")
         storage_top.addWidget(storage_title)
@@ -1248,9 +1263,11 @@ class MainWindow(QMainWindow):
         books_layout = QVBoxLayout(books_card)
         books_layout.setContentsMargins(22, 20, 22, 20)
         books_layout.setSpacing(13)
-        books_header = QHBoxLayout()
+        self.books_header_layout = QHBoxLayout()
+        books_header = self.books_header_layout
         title = self.localized(QLabel(), "books_to_send")
         title.setObjectName("cardTitle")
+        title.setWordWrap(True)
         books_header.addWidget(title)
         books_header.addStretch(1)
         self.book_count = QLabel()
@@ -1298,9 +1315,11 @@ class MainWindow(QMainWindow):
         history_layout = QVBoxLayout(history_card)
         history_layout.setContentsMargins(22, 18, 22, 18)
         history_layout.setSpacing(10)
-        history_header = QHBoxLayout()
+        self.history_header_layout = QHBoxLayout()
+        history_header = self.history_header_layout
         history_title = self.localized(QLabel(), "recent_transfers")
         history_title.setObjectName("cardTitle")
+        history_title.setWordWrap(True)
         history_header.addWidget(history_title)
         history_header.addStretch(1)
         clear_history_button = self.localized(QPushButton(), "clear_history")
@@ -1351,7 +1370,8 @@ class MainWindow(QMainWindow):
 
         action_card = QFrame()
         action_card.setObjectName("actionCard")
-        action_layout = QHBoxLayout(action_card)
+        self.action_layout = QHBoxLayout(action_card)
+        action_layout = self.action_layout
         action_layout.setContentsMargins(22, 17, 22, 17)
         action_layout.setSpacing(16)
         status_box = QVBoxLayout()
@@ -1546,6 +1566,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(f"{APP_NAME} | {ORGANIZATION}")
         for widget, key, values in self.localized_widgets:
             widget.setText(tr(key, **values))
+            widget.updateGeometry()
         self.language_select.setToolTip(tr("language_tooltip"))
         self.language_select.setAccessibleName(tr("language_tooltip"))
         self.manual_ip.setToolTip(tr("address_history"))
@@ -1561,6 +1582,8 @@ class MainWindow(QMainWindow):
         self.refresh_file_state()
         self.refresh_transfer_history()
         self.show_storage(self.current_storage, last_known=not bool(self.discovered_ip))
+        self.content.layout().invalidate()
+        self.content.updateGeometry()
 
     def remember_no_password(self, checked: bool) -> None:
         self.settings.no_password = checked
@@ -1941,17 +1964,36 @@ class MainWindow(QMainWindow):
         self.set_localized_text(self.operation_status, "cancelling")
 
     def resizeEvent(self, event) -> None:
-        compact = event.size().width() < 1180
-        narrow = event.size().width() < 860
+        available_width = max(320, event.size().width() - 64)
+        content_width = min(1400, available_width)
+        self.content.setFixedWidth(content_width)
+        header_compact = content_width < 900
+        hero_compact = content_width < 980
+        device_compact = content_width < 1160
+        options_compact = content_width < 900
+        files_compact = content_width < 820
+        install_compact = content_width < 1080
+        action_compact = content_width < 760
+        footer_compact = content_width < 840
+        ultra_narrow = content_width < 560
         horizontal = QBoxLayout.Direction.LeftToRight
         vertical = QBoxLayout.Direction.TopToBottom
-        self.hero_layout.setDirection(vertical if compact else horizontal)
-        self.device_top_layout.setDirection(vertical if compact else horizontal)
-        self.connection_options_layout.setDirection(vertical if compact else horizontal)
-        self.file_actions_layout.setDirection(vertical if narrow else horizontal)
-        self.footer_layout.setDirection(vertical if compact else horizontal)
-        self.install_layout.setDirection(vertical if compact else horizontal)
-        self.manual_ip.setMaximumWidth(16777215 if compact else 310)
+        self.header_layout.setDirection(vertical if header_compact else horizontal)
+        self.header_actions.setDirection(vertical if ultra_narrow else horizontal)
+        self.hero_layout.setDirection(vertical if hero_compact else horizontal)
+        self.steps_panel.setMinimumWidth(0 if hero_compact else 360)
+        self.device_top_layout.setDirection(vertical if device_compact else horizontal)
+        self.connection_options_layout.setDirection(vertical if options_compact else horizontal)
+        self.file_actions_layout.setDirection(vertical if files_compact else horizontal)
+        self.footer_layout.setDirection(vertical if footer_compact else horizontal)
+        self.install_layout.setDirection(vertical if install_compact else horizontal)
+        self.action_layout.setDirection(vertical if action_compact else horizontal)
+        self.storage_top_layout.setDirection(vertical if ultra_narrow else horizontal)
+        self.books_header_layout.setDirection(vertical if ultra_narrow else horizontal)
+        self.history_header_layout.setDirection(vertical if ultra_narrow else horizontal)
+        self.manual_ip.setMaximumWidth(16777215 if device_compact else 360)
+        self.language_select.setMaximumWidth(16777215 if ultra_narrow else 280)
+        self.website_button.setMaximumWidth(16777215 if ultra_narrow else 280)
         super().resizeEvent(event)
 
     def closeEvent(self, event) -> None:
