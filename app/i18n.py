@@ -252,6 +252,23 @@ for _language_code, _install_strings in _INSTALL_TRANSLATIONS.items():
 _current_language = "en"
 
 
+_FREE_BOOK_LABELS = {
+    "en": "Free LinguaLeaf books",
+    "ar": "كتب LinguaLeaf مجانية",
+    "es": "Libros LinguaLeaf gratis",
+    "fr": "Livres LinguaLeaf gratuits",
+    "ja": "LinguaLeaf 無料書籍",
+    "ko": "무료 LinguaLeaf 책",
+    "vi": "Sách LinguaLeaf miễn phí",
+    "zh-Hans": "免费 LinguaLeaf 读物",
+    "zh-Hant": "免費 LinguaLeaf 讀物",
+    "de": "Kostenlose LinguaLeaf-Bücher",
+    "ru": "Бесплатные книги LinguaLeaf",
+}
+for _language, _label in _FREE_BOOK_LABELS.items():
+    _TRANSLATIONS.setdefault(_language, {})["free_books"] = _label
+
+
 def normalize_language(value: str | None) -> str:
     code = (value or "").replace("_", "-").strip().lower()
     if code.startswith("zh"):

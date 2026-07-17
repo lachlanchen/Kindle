@@ -78,9 +78,10 @@ except ImportError:
 
 
 APP_NAME = "Kindle Book Sender"
-APP_VERSION = "1.3.2"
+APP_VERSION = "1.3.3"
 ORGANIZATION = "AgInTi Flow"
 WEBSITE = "https://lazying.art/eink"
+LEARN_WEBSITE = "https://learn.lazying.art"
 SSH_PORT = 2222
 REMOTE_BOOK_DIRECTORY = "/mnt/us/documents/Books"
 KEY_COMMENT = "AgInTi-Kindle-Book-Sender"
@@ -1118,6 +1119,12 @@ class MainWindow(QMainWindow):
         self.language_select.setCurrentIndex(max(0, selected_index))
         self.language_select.currentIndexChanged.connect(self.change_language)
         header_actions.addWidget(self.language_select)
+        self.books_button = self.localized(QPushButton(), "free_books")
+        self.books_button.setObjectName("primaryButton")
+        self.books_button.setMinimumWidth(210)
+        self.books_button.setMaximumWidth(280)
+        self.books_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(LEARN_WEBSITE)))
+        header_actions.addWidget(self.books_button)
         self.website_button = self.localized(QPushButton(), "guide_downloads")
         self.website_button.setObjectName("ghostButton")
         self.website_button.setMinimumWidth(210)
@@ -1976,10 +1983,11 @@ class MainWindow(QMainWindow):
         action_compact = content_width < 760
         footer_compact = content_width < 840
         ultra_narrow = content_width < 560
+        header_actions_compact = content_width < 720
         horizontal = QBoxLayout.Direction.LeftToRight
         vertical = QBoxLayout.Direction.TopToBottom
         self.header_layout.setDirection(vertical if header_compact else horizontal)
-        self.header_actions.setDirection(vertical if ultra_narrow else horizontal)
+        self.header_actions.setDirection(vertical if header_actions_compact else horizontal)
         self.hero_layout.setDirection(vertical if hero_compact else horizontal)
         self.steps_panel.setMinimumWidth(0 if hero_compact else 360)
         self.device_top_layout.setDirection(vertical if device_compact else horizontal)
@@ -1992,8 +2000,9 @@ class MainWindow(QMainWindow):
         self.books_header_layout.setDirection(vertical if ultra_narrow else horizontal)
         self.history_header_layout.setDirection(vertical if ultra_narrow else horizontal)
         self.manual_ip.setMaximumWidth(16777215 if device_compact else 360)
-        self.language_select.setMaximumWidth(16777215 if ultra_narrow else 280)
-        self.website_button.setMaximumWidth(16777215 if ultra_narrow else 280)
+        self.language_select.setMaximumWidth(16777215 if header_actions_compact else 280)
+        self.books_button.setMaximumWidth(16777215 if header_actions_compact else 280)
+        self.website_button.setMaximumWidth(16777215 if header_actions_compact else 280)
         super().resizeEvent(event)
 
     def closeEvent(self, event) -> None:
