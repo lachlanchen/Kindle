@@ -11,14 +11,15 @@ Comment:
 AgInTi-Flow-Kindle-Handoff-ONLY
 
 The private key has no passphrase and is embedded in the handoff PDF at the
-owner's request. It is intended only for KOReader SSH on this Kindle.
+owner's request. It is intended only for KOReader SSH on the owner's paired
+Kindles.
 
 DO NOT authorize or reuse this key on:
 - Windows, Linux, or macOS computers
 - servers or routers
 - GitHub or other source-hosting accounts
 - cloud services
-- another Kindle or any other device
+- an unrelated Kindle or any other device
 
 To revoke it, remove the line ending in AgInTi-Flow-Kindle-Handoff-ONLY from:
 /mnt/us/koreader/settings/SSH/authorized_keys

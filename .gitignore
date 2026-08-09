@@ -9,6 +9,14 @@ staging/
 
 # Local run state
 logs/latest-backup.txt
+logs/latest-*.txt
+logs/winterbreak2-local-server/
+
+# Never add new private handoff identities. Device private keys live in the
+# user's .ssh directory; only a selected public key is copied to the Kindle.
+Handoff/keys/*_rsa
+Handoff/keys/*_ed25519
+Handoff/keys/*.pem
 
 # Large Kindle/Amazon package formats if manually dropped into the repo.
 *.bin

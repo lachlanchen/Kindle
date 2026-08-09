@@ -249,6 +249,23 @@ for _language_code, _install_strings in _INSTALL_TRANSLATIONS.items():
     _TRANSLATIONS.setdefault(_language_code, {}).update(_install_strings)
 
 
+# Security-sensitive shared-key disclosures intentionally remain identical in
+# every locale until reviewed translations are available. A stale translation
+# must never describe this published, bundled identity as a per-computer secret.
+_SHARED_KEY_DISCLOSURES = {
+    "preparing_key": "Verifying the shared Kindle-only key...",
+    "no_password_tooltip": "The app will use no-password access once, install the shared published Kindle-only public key, and verify key login. It will not disable the Kindle setting.",
+    "footer": "Version {version}  ·  Shared published Kindle-only key  ·  Stop KOReader SSH when finished",
+    "paired_auto": "Paired automatically on {roots} with the shared Kindle-only identity.",
+    "first_use_usb": "If this Kindle has not authorized the shared key, connect it by USB once or use no-password Wi-Fi pairing.",
+    "bootstrap_success": "Passwordless bootstrap succeeded. The shared Kindle-only public key was installed and key login was verified.",
+    "key_verified": "Verified with the pinned shared Kindle-only key and the KOReader installation.",
+    "new_computer_help": "If the shared key is not authorized, stop KOReader SSH, enable 'Login without password (DANGEROUS)', start SSH, check the app's no-password option, and connect again.",
+}
+for _language_code in _TRANSLATIONS:
+    _TRANSLATIONS[_language_code].update(_SHARED_KEY_DISCLOSURES)
+
+
 _current_language = "en"
 
 

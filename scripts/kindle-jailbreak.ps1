@@ -125,7 +125,6 @@ function Compare-KindleVersion {
 function Get-RecommendedMethod {
     param([string]$Firmware)
     if (-not $Firmware) { return "unknown" }
-    if ((Compare-KindleVersion $Firmware "5.16.4") -lt 0) { return "winterbreak2" }
     if ((Compare-KindleVersion $Firmware "5.18.1") -lt 0) { return "winterbreak" }
     if ((Compare-KindleVersion $Firmware "5.18.5.0.1") -le 0) { return "adbreak-or-nosebleed" }
     return "check-current-kindlemodding"
@@ -184,7 +183,8 @@ function Download-LegacyPackages {
 
 function Download-ModernPackages {
     $downloads = Join-Root "downloads"
-    Download-LegacyPackages
+    Invoke-Download "https://github.com/KindleModding/Hotfix/releases/latest/download/Update_hotfix_universal.bin" (Join-Path $downloads "Update_hotfix_universal.bin") "94d5c05254b70c4905392515411f620168ac238db62c7dcbc48a1e31d5de6c59"
+    Invoke-Download "https://fw.notmarek.com/khf/kual-mrinstaller-khf.tar.xz" (Join-Path $downloads "kual-mrinstaller-khf.tar.xz") ""
     $peki = Get-GitHubLatestAssetUrl "KindleTweaks" "PEKI" "\.zip$"
     $adbreak = Get-GitHubLatestAssetUrl "KindleModding" "AdBreak" "\.zip$"
     Invoke-Download $peki (Join-Path $downloads "PEKI-latest.zip") ""
@@ -200,6 +200,20 @@ function Expand-ZipClean {
     Remove-Item -LiteralPath $dest -Recurse -Force -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Path $dest -Force | Out-Null
     Expand-Archive -LiteralPath $Zip -DestinationPath $dest -Force
+    return $dest
+}
+
+function Expand-TarClean {
+    param([string]$Archive, [string]$Destination)
+    $root = Get-ProjectRoot
+    $dest = (Join-Path $root $Destination)
+    if (-not ($dest.StartsWith($root))) { throw "Unsafe extract destination: $dest" }
+    Remove-Item -LiteralPath $dest -Recurse -Force -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Path $dest -Force | Out-Null
+    & tar.exe -xf $Archive -C $dest
+    if ($LASTEXITCODE -ne 0) {
+        throw "tar.exe failed extracting $Archive"
+    }
     return $dest
 }
 
@@ -305,7 +319,12 @@ function Stage-AdBreak {
     Remove-Item (Split-Path $work -Parent) -Recurse -Force -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Path (Split-Path $work -Parent) -Force | Out-Null
     Copy-Item $assets $work -Recurse -Force
-    Copy-Item (Join-Path $adbreakExtract "*") $work -Recurse -Force
+    $adbreakHtml = Get-ChildItem $adbreakExtract -Filter "adbreak.html" -Recurse | Select-Object -First 1
+    if (-not $adbreakHtml) {
+        throw "AdBreak extracted, but adbreak.html was not found."
+    }
+    $adbreakPayload = $adbreakHtml.DirectoryName
+    Copy-Item (Join-Path $adbreakPayload "*") $work -Recurse -Force
 
     $replace = Get-ChildItem $work -Filter "replace.bat" -Recurse | Select-Object -First 1
     if ($replace) {
@@ -316,8 +335,7 @@ function Stage-AdBreak {
             Pop-Location
         }
     } else {
-        $adbreakHtml = Get-ChildItem $work -Filter "adbreak.html" -Recurse | Select-Object -First 1
-        if (-not $adbreakHtml) { throw "AdBreak extracted, but no replace.bat or adbreak.html was found." }
+        $adbreakHtml = Get-Item (Join-Path $work "adbreak.html")
         Get-ChildItem $work -Filter "details.html" -Recurse | ForEach-Object {
             Copy-Item $adbreakHtml.FullName $_.FullName -Force
         }
@@ -338,7 +356,7 @@ function Stage-PostJailbreak {
 
     Download-ModernPackages
     $downloads = Join-Root "downloads"
-    $mrpi = Expand-ZipClean (Join-Path $downloads "kual-mrinstaller-khf.zip") "packages\mrpi-modern"
+    $mrpi = Expand-TarClean (Join-Path $downloads "kual-mrinstaller-khf.tar.xz") "packages\mrpi-modern"
     $peki = Expand-ZipClean (Join-Path $downloads "PEKI-latest.zip") "packages\peki"
     $koreaderZip = Join-Path $downloads ("koreader-{0}-v2026.03.zip" -f $family)
     if (-not (Test-Path $koreaderZip)) {
@@ -385,6 +403,9 @@ if ($Action -notin @("DownloadLegacy", "DownloadModern", "BuildLegacy")) {
 switch ($Action) {
     "Diagnose" {
         $info = Get-KindleInfo $root
+        # Do not print a full serial or raw version text into terminals/logs.
+        $info.Remove("versionText")
+        $info.Remove("serial")
         $info["recommendedMethod"] = Get-RecommendedMethod $info.firmware
         $info["koreaderFamily"] = Get-KOReaderFamily $info.firmware
         $info | ConvertTo-Json -Depth 5
@@ -397,9 +418,8 @@ switch ($Action) {
         $method = Get-RecommendedMethod $info.firmware
         Write-Host "Firmware: $($info.firmware)"
         Write-Host "Recommended method: $method"
-        if ($method -eq "winterbreak2") {
-            Stage-WinterBreak2 $root
-            Fill-OtaSpace $root $LeaveMiB
+        if ($method -eq "winterbreak") {
+            Write-Host "This generic helper will not infer a device payload from firmware alone. For the audited PW5SE 5.15.1 use scripts\pw5se-winterbreak.ps1; for any other device use its current model-specific WinterBreak guide."
         } elseif ($method -eq "adbreak-or-nosebleed") {
             Write-Host "Use StageAdBreak -Force only after confirming ads are enabled on the registered Kindle."
         } else {

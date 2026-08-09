@@ -32,10 +32,11 @@ Contents:
 SECURITY WARNING
 ----------------
 The private key has no passphrase and is deliberately embedded in the PDF
-for appliance-style handoff. It must be used ONLY for this Kindle. Never
-authorize it on a computer, server, router, source-hosting account, cloud
-account, or any other device. Anyone with this package can access the Kindle
-while KOReader SSH is running and reachable.
+for appliance-style handoff. It must be used ONLY for the owner's paired
+KOReader Kindles. Never authorize it on a computer, server, router,
+source-hosting account, cloud account, unrelated Kindle, or any other device.
+Anyone with this package can access a paired Kindle while KOReader SSH is
+running and reachable.
 
 Quick SSH:
   connect-kindle.cmd 192.168.1.109

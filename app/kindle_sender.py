@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import base64
+import binascii
 import concurrent.futures
 import ctypes
 from datetime import datetime
+import hashlib
 import ipaddress
 import json
 import os
@@ -15,6 +18,7 @@ import subprocess
 import sys
 import threading
 import time
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -78,13 +82,15 @@ except ImportError:
 
 
 APP_NAME = "Kindle Book Sender"
-APP_VERSION = "1.3.3"
+APP_VERSION = "1.3.4"
 ORGANIZATION = "AgInTi Flow"
 WEBSITE = "https://lazying.art/eink"
 LEARN_WEBSITE = "https://learn.lazying.art"
 SSH_PORT = 2222
 REMOTE_BOOK_DIRECTORY = "/mnt/us/documents/Books"
 KEY_COMMENT = "AgInTi-Kindle-Book-Sender"
+SHARED_KEY_RELATIVE_PATH = Path("Handoff") / "keys" / "kindle_handoff_rsa"
+SHARED_KEY_FINGERPRINT = "SHA256:Q/RgMY4wzHjQYuC3sfHDykwp8ejp9C7wyfAZLE8OMJE"
 
 def application_data_directory() -> Path:
     system = platform.system()
@@ -428,27 +434,130 @@ class SettingsStore:
         self.save()
 
 
+def openssh_sha256_fingerprint(key: paramiko.PKey) -> str:
+    digest = hashlib.sha256(key.asbytes()).digest()
+    encoded = base64.b64encode(digest).decode("ascii").rstrip("=")
+    return f"SHA256:{encoded}"
+
+
+def bundled_shared_private_key_path() -> Path:
+    bundle_root = getattr(sys, "_MEIPASS", None)
+    if bundle_root:
+        root = Path(bundle_root)
+    else:
+        root = Path(__file__).resolve().parent.parent
+    return root / SHARED_KEY_RELATIVE_PATH
+
+
+def load_pinned_shared_key(path: Path) -> paramiko.RSAKey:
+    try:
+        key = paramiko.RSAKey.from_private_key_file(str(path))
+    except (OSError, paramiko.SSHException) as error:
+        raise RuntimeError("The bundled shared Kindle key is missing or unreadable.") from error
+    if openssh_sha256_fingerprint(key) != SHARED_KEY_FINGERPRINT:
+        raise RuntimeError("The bundled shared Kindle key failed its pinned fingerprint check.")
+    return key
+
+
+def public_key_file_fingerprint(path: Path) -> str | None:
+    try:
+        fields = path.read_text(encoding="ascii").strip().split()
+        if len(fields) < 2 or fields[0] != "ssh-rsa":
+            return None
+        blob = base64.b64decode(fields[1], validate=True)
+        return openssh_sha256_fingerprint(paramiko.RSAKey(data=blob))
+    except (OSError, ValueError, paramiko.SSHException):
+        return None
+
+
+def public_key_identity(public_line: str) -> tuple[str, str] | None:
+    """Return the OpenSSH key type and blob, deliberately ignoring its comment."""
+    fields = public_line.strip().split()
+    if len(fields) < 2 or fields[0] != "ssh-rsa":
+        return None
+    try:
+        base64.b64decode(fields[1], validate=True)
+    except (ValueError, binascii.Error):
+        return None
+    return fields[0], fields[1]
+
+
+def authorized_keys_contains_identity(contents: str, public_line: str) -> bool:
+    identity = public_key_identity(public_line)
+    if identity is None:
+        raise ValueError("The app public key line is invalid.")
+    return any(public_key_identity(line) == identity for line in contents.splitlines())
+
+
+def authorized_key_install_command(public_line: str) -> str:
+    identity = public_key_identity(public_line)
+    if identity is None:
+        raise ValueError("The app public key line is invalid.")
+    key_type, key_blob = identity
+    ssh_directory = shlex.quote("/mnt/us/koreader/settings/SSH")
+    authorized_keys = shlex.quote("/mnt/us/koreader/settings/SSH/authorized_keys")
+    awk_program = shlex.quote(
+        "$1 == key_type && $2 == key_blob { found = 1 } "
+        "END { exit(found ? 0 : 1) }"
+    )
+    return (
+        f"mkdir -p {ssh_directory} && touch {authorized_keys} && "
+        f"(awk -v key_type={shlex.quote(key_type)} "
+        f"-v key_blob={shlex.quote(key_blob)} {awk_program} "
+        f"{authorized_keys} 2>/dev/null || "
+        f"printf '%s\\n' {shlex.quote(public_line)} >> {authorized_keys})"
+    )
+
+
 class KeyStore:
-    def __init__(self, root: Path) -> None:
+    def __init__(self, root: Path, shared_private_key_path: Path | None = None) -> None:
         self.root = root
-        self.private_key_path = root / "kindle_sender_rsa"
-        self.public_key_path = root / "kindle_sender_rsa.pub"
+        self.shared_private_key_path = shared_private_key_path or bundled_shared_private_key_path()
+        self.legacy_private_key_path = root / "kindle_sender_rsa"
+        self.legacy_public_key_path = root / "kindle_sender_rsa.pub"
+        self.legacy_backup_root = root / "legacy-key-backups"
+        self._shared_key: paramiko.RSAKey | None = None
 
-    def ensure(self) -> paramiko.RSAKey:
-        self.root.mkdir(parents=True, exist_ok=True)
-        if self.private_key_path.exists():
-            return paramiko.RSAKey.from_private_key_file(str(self.private_key_path))
+    def _legacy_paths_to_back_up(self) -> list[Path]:
+        return [
+            path
+            for path in (self.legacy_private_key_path, self.legacy_public_key_path)
+            if path.is_file()
+        ]
 
-        key = paramiko.RSAKey.generate(bits=3072)
-        key.write_private_key_file(str(self.private_key_path))
+    def _back_up_legacy_keys(self) -> None:
+        paths = self._legacy_paths_to_back_up()
+        if not paths:
+            return
+
+        self.legacy_backup_root.mkdir(parents=True, exist_ok=True)
         try:
-            self.private_key_path.chmod(0o600)
+            self.legacy_backup_root.chmod(0o700)
         except OSError:
             pass
-        self.public_key_path.write_text(
-            f"{key.get_name()} {key.get_base64()} {KEY_COMMENT}\n",
-            encoding="ascii",
-        )
+        timestamp = datetime.now().astimezone().strftime("%Y%m%dT%H%M%S%z")
+        backup = self.legacy_backup_root / f"legacy-{timestamp}-{uuid.uuid4().hex[:12]}"
+        backup.mkdir()
+        try:
+            backup.chmod(0o700)
+        except OSError:
+            pass
+        for source in paths:
+            destination = backup / source.name
+            source.replace(destination)
+            if source == self.legacy_private_key_path:
+                try:
+                    destination.chmod(0o600)
+                except OSError:
+                    pass
+
+    def ensure(self) -> paramiko.RSAKey:
+        if self._shared_key is not None:
+            return self._shared_key
+        key = load_pinned_shared_key(self.shared_private_key_path)
+        self.root.mkdir(parents=True, exist_ok=True)
+        self._back_up_legacy_keys()
+        self._shared_key = key
         return key
 
     @property
@@ -516,8 +625,7 @@ def install_public_key_on_usb(key_store: KeyStore) -> list[Path]:
         existing = ""
         if authorized_keys.exists():
             existing = authorized_keys.read_text(encoding="utf-8", errors="replace")
-        lines = {line.strip() for line in existing.splitlines() if line.strip()}
-        if public_line not in lines:
+        if not authorized_keys_contains_identity(existing, public_line):
             prefix = "" if not existing or existing.endswith(("\n", "\r")) else "\n"
             with authorized_keys.open("a", encoding="ascii", newline="\n") as handle:
                 handle.write(prefix + public_line + "\n")
@@ -659,14 +767,7 @@ def install_public_key_over_ssh(endpoint: Endpoint, key_store: KeyStore) -> None
         client = connect_ssh_without_password(endpoint, timeout=6)
         if not verify_koreader_client(client):
             raise RuntimeError(f"{endpoint.display} accepts SSH but is not a KOReader Kindle.")
-        public_line = shlex.quote(key_store.public_key_line)
-        ssh_directory = shlex.quote("/mnt/us/koreader/settings/SSH")
-        authorized_keys = shlex.quote("/mnt/us/koreader/settings/SSH/authorized_keys")
-        command = (
-            f"mkdir -p {ssh_directory} && touch {authorized_keys} && "
-            f"(grep -F -x -q {public_line} {authorized_keys} 2>/dev/null || "
-            f"printf '%s\\n' {public_line} >> {authorized_keys})"
-        )
+        command = authorized_key_install_command(key_store.public_key_line)
         _, stdout, stderr = client.exec_command(command, timeout=8)
         if stdout.channel.recv_exit_status() != 0:
             detail = stderr.read().decode("utf-8", errors="replace").strip()
@@ -710,7 +811,7 @@ def authenticate_koreader(endpoint: Endpoint, key_store: KeyStore, allow_no_pass
         install_public_key_over_ssh(endpoint, key_store)
         return "bootstrapped"
     raise RuntimeError(
-        "SSH is reachable, but this computer's key is not authorized. "
+        "SSH is reachable, but the pinned shared Kindle key is not authorized. "
         "Enable the no-password checkbox for first-time pairing, or pair by USB. "
         f"Technical detail: {key_error}"
     )

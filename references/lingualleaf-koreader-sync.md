@@ -2,6 +2,10 @@
 
 Date: 2026-06-11
 
+The first part of this note is the historical five-book USB sync completed on
+that date. The larger Nutstore-to-PW5SE migration completed and independently
+confirmed on 2026-08-09 is documented separately at the end.
+
 ## Goal
 
 Sync the color LinguaLeaf PDF books to a folder that is easy to open from
@@ -193,3 +197,208 @@ Practical rule:
 - Return to the normal Kindle home/library screen.
 - Reconnect USB and wait for normal USB Drive Mode.
 - Then run `sync-lingualleaf-books.sh`.
+
+The inverse rule applies to PW5SE autostart testing: disconnect USB **data**
+before reboot. A computer data cable can put the Kindle into USB Drive Mode and
+export/make unavailable `/mnt/us`, which contains both KOReader and its marker.
+No cable, a wall charger, or a charge-only cable is safe for boot acceptance.
+
+## Windows PW5SE copy recorded on 2026-08-08
+
+One black-and-white trilingual PDF was copied with literal Unicode paths to
+both of these folders, without a `blackwhite` subfolder:
+
+```text
+documents/PocketPolished/
+documents/LinguaLeaf/
+```
+
+Source and both destinations were verified as 15,373,749 bytes with SHA-256:
+
+```text
+2d12225ef4c37b6045e6fb7dc74c6c94d5d1b11334a7d5c46b51f4c4fbf7a0e4
+```
+
+Use `scripts/sync-kindle-book.ps1` for repeat copies. It skips matching files,
+backs up a differing destination to the ignored local `device-backups/` tree,
+and verifies each destination after copying.
+
+## Nutstore to PW5SE initial library snapshot completed on 2026-08-09
+
+The initial-snapshot migration is complete. Its final idempotent apply
+confirmation reported `bookCount=249`, `copied=0`, and `resumed=249`, meaning
+all 249 plan entries had already completed and no book required retransmission
+during confirmation. The post-transfer audit found all seven exact folder
+counts shown below, zero owned `.migrate-*.tmp` files, and 22,910,896 KiB free
+on `/mnt/us`.
+
+This is a dated snapshot, not a permanent source count. Later on 2026-08-09,
+Nutstore added one LinguaLeaf PDF, `Giving Up the Gun...｜黑白.pdf`, with source
+timestamp 17:07. That new book was not in the audited 249-entry plan and is not
+yet claimed transferred. The current desired corpus is 240 LinguaLeaf PDFs plus
+10 PocketPolished PDFs, or 250 total; append-only resume/live sync is pending.
+
+### Source-of-truth rule
+
+All PDF files come from these two local Nutstore directories:
+
+```text
+C:\Users\Administrator\Nutstore\1\Share\LinguaLeaf\blackwhite
+C:\Users\Administrator\Nutstore\1\Share\PocketPolished
+```
+
+The completed snapshot inventory was 239 LinguaLeaf PDFs plus 10
+PocketPolished PDFs; the current source is 240 plus 10 after the addition noted
+above. The old PW2 is never a source for book bytes and is not an inclusion
+filter. It is consulted only for the relative folder of an exact-name
+predecessor and, optionally, for a compatible KOReader `.sdr` sidecar.
+Therefore every Nutstore book remains in scope even if the old PW2 never
+contained it.
+
+The audited 249-book snapshot's deterministic PW5SE destination plan under
+`/mnt/us/documents` is:
+
+| Relative folder | PDFs |
+| --- | ---: |
+| `LinguaLeaf/ar-en-jp-zh-blackwhite` | 1 |
+| `LinguaLeaf/en-jp-zh-blackwhite` | 160 |
+| `LinguaLeaf/jp-zh-blackwhite` | 9 |
+| `LinguaLeaf/waka-kana-en-jp-zh-blackwhite` | 2 |
+| `LinguaLeaf/wenyan-jp-zh-trilingual-leftovers-blackwhite` | 3 |
+| `LinguaLeaf/wenyan-main-quadrilingual-blackwhite` | 64 |
+| `PocketPolished` | 10 |
+| **Total** | **249** |
+
+This mapping has no destination collisions. It preserves an exact old-PW2
+relative folder when one unambiguous filename match exists; audited filename
+descriptors provide the folder for additional Nutstore books. PocketPolished
+stays flat. `A Brief History of Time` is canonical only in
+`LinguaLeaf/en-jp-zh-blackwhite`, not in PocketPolished or the LinguaLeaf root.
+
+### Guarded and resumable transfer
+
+`scripts/migrate-kindle-library.py` is plan-only unless `--apply` is supplied:
+
+```powershell
+python .\scripts\migrate-kindle-library.py
+python .\scripts\migrate-kindle-library.py --apply
+```
+
+For each PDF, the tool hashes the Nutstore source with SHA-256, uploads one book
+at a time to an owned temporary name in the destination directory, checks its
+size, atomically publishes it with SFTP rename, then reads the published remote
+file back through SFTP and verifies its SHA-256. The local resume manifest is
+written atomically after each verified book, so an interrupted run can repeat
+the same `--apply` command without restarting completed work.
+
+The default resume manifest is:
+
+```text
+device-backups/kindle-library-migration/resume.json
+```
+
+Despite that ignored directory name, this JSON is transfer state only: it is
+not a copy of any book or Kindle content. Per the chosen migration policy, the
+tool creates no backup copy on the new PW5SE. An existing destination may be
+replaced only through the guarded temporary-file flow. Cleanup of the two old,
+misplaced `A Brief History of Time` paths is allowed only after the canonical
+copy matches the Nutstore size and SHA-256; each misplaced file must also match
+that exact source before removal.
+
+### Optional reading state
+
+KOReader sidecars are deliberately best effort and never block the book sync.
+No `.sdr` sidecars were part of the initial 249-PDF transfer. A later read-only
+audit found 20 adjacent sidecars on the PW2. Every stored metadata checksum is
+stale, so metadata alone is not sufficient evidence. For 11 of the 20,
+however, the adjacent PW2 PDF has the same size and current KOReader partial MD5
+as the corresponding Nutstore PDF. Those 11 were eligible for a guarded
+sidecar-only attempt without using the PW2 as a source of book bytes. The other
+nine current PDFs differ and remain ineligible.
+
+The guarded apply is complete for that 249-book snapshot. Its PDF result was
+`bookCount=249`, `copied=0`, and `resumed=249`; its sidecar result was 10 copied
+and 239 skipped. Across all 249 entries, the detailed sidecar statuses were:
+
+- 10 `copied`;
+- one `skipped-destination-exists`;
+- 161 `not-inspected`;
+- 68 absent or ambiguous; and
+- nine checksum/current-PDF mismatches.
+
+An independent post-copy audit compared every file in all 10 copied sidecar
+trees with its PW2 source by file size and SHA-256. All 10 trees matched exactly,
+and no owned temporary files remained. Both guarded executions captured an
+original `com.lab126.powerd preventScreenSaver` value of `0` and restored it to
+`0`.
+
+*Zizhi Tongjian, Part 1* is the one
+`skipped-destination-exists` result and was **not** overwritten. Its existing
+PW5SE sidecar records `last_page=11` and `doc_pages=18079`; the PW2 sidecar
+records `last_page=4651` and the same `doc_pages=18079`. The full PDF SHA-256 is
+identical across Nutstore, PW2, and PW5SE, so this is a reading-state conflict,
+not an edition mismatch. The safe default correctly preserved the PW5SE state.
+An explicit transactional replacement path is implemented and tested but has not
+run. Replacement awaits closing the book in KOReader/file browser and a
+separate explicit guarded run.
+
+*Shiji* has differently named/edition sidecars. No mapping is guessed, so its
+reading state remains deliberately unmapped and was not copied.
+
+The migration command supports an independent sidecar attempt with:
+
+```powershell
+python .\scripts\migrate-kindle-library.py --apply --copy-sdr
+```
+
+A PW2 `.sdr` directory is eligible only after an unambiguous destination is
+known and current source-book identity is proved. Normally that proof is a
+matching KOReader `partial_md5_checksum` in metadata. For the audited stale
+metadata above, the proof instead uses the current adjacent PW2 PDF's size and
+KOReader-style partial hash against the Nutstore PDF. Missing, ambiguous,
+mismatched, unsafe, already-present, or failed sidecars are skipped; the
+Nutstore PDF remains authoritative. The normal command never overwrites an
+existing destination sidecar.
+
+### Temporary keep-awake lifecycle
+
+For the live network transfer, first capture the PW5SE's current
+`com.lab126.powerd preventScreenSaver` value, temporarily set it to `1`, and
+restore the captured value in cleanup whether the transfer succeeds or fails.
+Verify the restored value before declaring the run finished. This is a
+temporary transfer guard, not a permanent never-sleep setting. SSH transport
+keepalives run every 30 seconds, and the same migration command remains
+resumable if Wi-Fi or SSH still drops.
+
+For the completed PDF/sidecar apply and the independent sidecar audit, the
+original `preventScreenSaver` value was `0` and was verified restored to `0`.
+
+### Final cleanup evidence
+
+The two noncanonical `A Brief History of Time` root paths were confirmed absent:
+
+```text
+/mnt/us/documents/LinguaLeaf/A Brief History of Time (...).pdf
+/mnt/us/documents/PocketPolished/A Brief History of Time (...).pdf
+```
+
+The ellipses above intentionally avoid restating the long multilingual
+filename; cleanup used the exact literal paths and was hash-gated. The one
+canonical copy remains in `LinguaLeaf/en-jp-zh-blackwhite`.
+
+### Portable Kindle-only identity
+
+The migration and current Kindle Book Sender use the intentionally published
+Handoff/PDF identity. Its pinned fingerprint is:
+
+```text
+SHA256:Q/RgMY4wzHjQYuC3sfHDykwp8ejp9C7wyfAZLE8OMJE
+```
+
+The key contents must not be printed in logs or documentation. This is a
+convenience key with an intentionally distributed private half: anyone who
+obtains the repository, app bundle, or handoff material may authenticate while
+KOReader SSH is reachable on a paired Kindle. Authorize it only on these
+personally owned Kindles, never on a computer, router, server, or unrelated
+device. Keep the separate PW5SE recovery key authorized as the administrative
+fallback.

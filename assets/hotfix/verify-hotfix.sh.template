@@ -1,0 +1,224 @@
+#!/bin/sh
+# Name: Verify Universal Hotfix
+# Author: lazying.art
+# DontUseFBInk
+
+set -u
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+export PATH
+LC_ALL=C
+export LC_ALL
+
+# The staging script must replace this token with exactly 32 lowercase hex
+# characters and must pin the resulting script hash in its device record.
+NONCE="__LAZYING_ART_HOTFIX_NONCE_HEX__"
+HOTFIX_VERSION_FILE="/var/local/kmc/hotfix/libhotfixutils"
+SYSTEM_LOG="/var/log/messages"
+FBINK="/mnt/us/libkh/bin/fbink"
+RESULT="/mnt/us/documents/HOTFIX_VERIFIED_LAZYING_ART.txt"
+TMP=""
+
+show_message()
+{
+    DISPLAY_MESSAGE="$1"
+    if [ -x "$FBINK" ]; then
+        "$FBINK" -x 1 -y 3 -r -S 3 "$DISPLAY_MESSAGE" >/dev/null 2>&1 && return 0
+    fi
+    printf '%s\n' "$DISPLAY_MESSAGE" >/dev/console 2>/dev/null || true
+}
+
+cleanup()
+{
+    if [ -n "$TMP" ] && { [ -e "$TMP" ] || [ -L "$TMP" ]; }; then
+        rm -f "$TMP"
+    fi
+}
+
+fail()
+{
+    show_message "Hotfix verify failed: $1"
+    exit 1
+}
+
+require_file()
+{
+    [ -f "$1" ] || fail "essentials"
+}
+
+require_executable()
+{
+    [ -x "$1" ] || fail "essentials"
+}
+
+file_md5()
+{
+    md5sum "$1" 2>/dev/null | awk 'NR == 1 { print $1 }'
+}
+
+trap cleanup 0 1 2 15
+
+CURRENT_UID="$(id -u 2>/dev/null)" || fail "uid"
+[ "$CURRENT_UID" = "0" ] || fail "uid"
+
+case "$NONCE" in
+    "" | *[!0-9a-f]*)
+        fail "nonce"
+        ;;
+esac
+[ "${#NONCE}" -eq 32 ] || fail "nonce"
+
+[ -d "/mnt/us/documents" ] || fail "documents"
+[ -w "/mnt/us/documents" ] || fail "documents"
+if [ -e "$RESULT" ] || [ -L "$RESULT" ]; then
+    fail "result exists"
+fi
+
+# Universal Hotfix 2.5.0 root and sh_integration essentials. Running this
+# document already exercises the registered sh_integration -> setuid su path;
+# these checks verify the corresponding persistent files and system hooks.
+require_file "$HOTFIX_VERSION_FILE"
+require_executable "/var/local/kmc/hotfix/hotfix.sh"
+require_executable "/var/local/kmc/hotfix/run_hotfix.sh"
+require_executable "/var/local/kmc/KMCLog.sh"
+require_file "/etc/upstart/kmc.conf"
+require_executable "/usr/bin/logThis.sh"
+require_file "/MNTUS_EXEC"
+require_file "/PRE_GM_DEBUGGING_FEATURES_ENABLED__REMOVE_AT_GMC"
+require_executable "/var/local/kmc/armhf/bin/gandalf"
+[ -u "/var/local/kmc/armhf/bin/gandalf" ] || fail "essentials"
+require_executable "/var/local/mkk/su"
+require_executable "/var/local/kmc/armhf/bin/sh_integration_launcher"
+require_file "/var/local/kmc/armhf/lib/sh_integration_extractor.so"
+require_executable "$FBINK"
+
+VERSION_LINE_COUNT="$(grep -c '^HOTFIX_VERSION=' "$HOTFIX_VERSION_FILE" 2>/dev/null)" || fail "version"
+EXACT_VERSION_COUNT="$(grep -c '^HOTFIX_VERSION="2[.]5[.]0"$' "$HOTFIX_VERSION_FILE" 2>/dev/null)" || fail "version"
+[ "$VERSION_LINE_COUNT" = "1" ] || fail "version"
+[ "$EXACT_VERSION_COUNT" = "1" ] || fail "version"
+
+# Require the installed Java keystore and Kindlet library to match the copies
+# delivered in the persistent 2.5.0 payload.
+require_file "/var/local/mkk/developer.keystore"
+require_file "/var/local/java/keystore/developer.keystore"
+PERSISTENT_KEYSTORE_MD5="$(file_md5 "/var/local/mkk/developer.keystore")"
+INSTALLED_KEYSTORE_MD5="$(file_md5 "/var/local/java/keystore/developer.keystore")"
+[ -n "$PERSISTENT_KEYSTORE_MD5" ] || fail "keystore"
+[ "$INSTALLED_KEYSTORE_MD5" = "$PERSISTENT_KEYSTORE_MD5" ] || fail "keystore"
+
+require_file "/var/local/mkk/json_simple-1.1.jar"
+require_file "/opt/amazon/ebook/lib/json_simple-1.1.jar"
+PERSISTENT_KINDLET_MD5="$(file_md5 "/var/local/mkk/json_simple-1.1.jar")"
+INSTALLED_KINDLET_MD5="$(file_md5 "/opt/amazon/ebook/lib/json_simple-1.1.jar")"
+[ -n "$PERSISTENT_KINDLET_MD5" ] || fail "kindlet"
+[ "$INSTALLED_KINDLET_MD5" = "$PERSISTENT_KINDLET_MD5" ] || fail "kindlet"
+
+# Firmware with a squashfs update keystore and older directory-based firmware
+# use different official key layouts. Validate the layout that is present.
+if [ -f "/etc/uks.sqsh" ]; then
+    [ "$(file_md5 "/etc/uks.sqsh")" = "17b5ca595e70ffeee1424ed5e7f09c47" ] || fail "update key"
+else
+    require_file "/etc/uks/pubdevkey01.pem"
+    [ "$(file_md5 "/etc/uks/pubdevkey01.pem")" = "7130ce39bb3596c5067cabb377c7a9ed" ] || fail "update key"
+fi
+
+DEBUG_HOOK_OK=0
+for DEBUG_CONFIG in \
+    "/app/kpp_app_cmds.json" \
+    "/usr/share/app/kpp_sys_cmds.json" \
+    "/usr/share/webkit-1.0/pillow/debug_cmds.json"
+do
+    if [ -f "$DEBUG_CONFIG" ] && \
+        grep -Fq '";kmclog" : "/var/local/kmc/KMCLog.sh"' "$DEBUG_CONFIG" 2>/dev/null; then
+        DEBUG_HOOK_OK=1
+    fi
+done
+[ "$DEBUG_HOOK_OK" = "1" ] || fail "debug hook"
+
+require_file "$SYSTEM_LOG"
+START_MESSAGE="Running Universal Hotfix (2.5.0)"
+COMPLETE_MESSAGE="Hotfix Complete! Restarting GUI."
+
+# A syslog prefix is expected, so compare the message as an exact line suffix.
+# Selecting the latest start rejects an older completed run followed by a newer
+# incomplete run.
+START_LINE="$(
+    awk -v wanted="$START_MESSAGE" '
+        function ends_with(value, suffix) {
+            return length(value) >= length(suffix) && substr(value, length(value) - length(suffix) + 1) == suffix
+        }
+        ends_with($0, wanted) { latest = NR }
+        END { if (latest) print latest }
+    ' "$SYSTEM_LOG"
+)" || fail "start log"
+[ -n "$START_LINE" ] || fail "start log"
+
+COMPLETE_LINE="$(
+    awk -v wanted="$COMPLETE_MESSAGE" -v after="$START_LINE" '
+        function ends_with(value, suffix) {
+            return length(value) >= length(suffix) && substr(value, length(value) - length(suffix) + 1) == suffix
+        }
+        NR > after && ends_with($0, wanted) { print NR; exit }
+    ' "$SYSTEM_LOG"
+)" || fail "completion log"
+[ -n "$COMPLETE_LINE" ] || fail "completion log"
+[ "$COMPLETE_LINE" -gt "$START_LINE" ] || fail "completion log"
+
+# Require exactly the 13 jobs from the tagged 2.5.0 source, in source/glob
+# order, between that latest start and its later completion.
+if ! awk -v first="$START_LINE" -v last="$COMPLETE_LINE" '
+    function ends_with(value, suffix) {
+        return length(value) >= length(suffix) && substr(value, length(value) - length(suffix) + 1) == suffix
+    }
+    BEGIN {
+        expected[1] = "00_setup_kmc_binaries.sh"
+        expected[2] = "install_debug_commands_kpp_app.sh"
+        expected[3] = "install_debug_commands_kpp_sys.sh"
+        expected[4] = "install_debug_commands_pillow.sh"
+        expected[5] = "install_dispatch.sh"
+        expected[6] = "install_gm_debugging.sh"
+        expected[7] = "install_kmc_upstart.sh"
+        expected[8] = "install_mkk_dev_keystore.sh"
+        expected[9] = "install_mkk_kindlet_jb.sh"
+        expected[10] = "install_mntus_exec.sh"
+        expected[11] = "install_update_keys.sh"
+        expected[12] = "setup_fbink.sh"
+        expected[13] = "setup_gandalf.sh"
+    }
+    NR > first && NR < last && index($0, "Running job: ") {
+        seen++
+        wanted = "Running job: " expected[seen]
+        if (seen > 13 || !ends_with($0, wanted)) bad = 1
+    }
+    END {
+        if (bad || seen != 13) exit 1
+    }
+' "$SYSTEM_LOG"; then
+    fail "job log"
+fi
+
+TMP="${RESULT}.tmp.$$"
+if [ -e "$TMP" ] || [ -L "$TMP" ]; then
+    fail "temporary file"
+fi
+
+(
+    umask 077
+    set -C
+    printf '%s\n' \
+        "kindle-hotfix-evidence-v1" \
+        "nonce=$NONCE" \
+        "hotfix=2.5.0" \
+        "runner=complete" > "$TMP"
+) || fail "write"
+
+sync || fail "sync"
+if [ -e "$RESULT" ] || [ -L "$RESULT" ]; then
+    fail "result appeared"
+fi
+mv "$TMP" "$RESULT" || fail "rename"
+TMP=""
+sync || fail "sync"
+
+show_message "Universal Hotfix 2.5.0 verified."
+exit 0

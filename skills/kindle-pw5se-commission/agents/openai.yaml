@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kindle PW5SE Commission"
+  short_description: "Safely jailbreak and commission a PW5SE"
+  default_prompt: "Use $kindle-pw5se-commission to audit and safely commission my firmware 5.15.1 Kindle."

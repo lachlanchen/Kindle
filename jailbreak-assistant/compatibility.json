@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "catalog_version": "2026.07.14",
-  "reviewed": "2026-07-14",
+  "catalog_version": "2026.08.08",
+  "reviewed": "2026-08-08",
   "models_url": "https://kindlemodding.org/models.json",
   "catalog_url": "https://raw.githubusercontent.com/lachlanchen/Kindle/main/jailbreak-assistant/compatibility.json",
   "sources": {
@@ -156,7 +156,7 @@
     {
       "id": "winterbreak2",
       "name": "WinterBreak2",
-      "priority": 80,
+      "priority": 70,
       "kind": "stage",
       "guide_url": "https://kindlemodding.org/jailbreaking/WinterBreak2/",
       "summary": "Updated WinterBreak-family payload listed by the official model finder for many 5.x Kindles.",
@@ -188,7 +188,7 @@
     {
       "id": "winterbreak",
       "name": "WinterBreak",
-      "priority": 75,
+      "priority": 85,
       "kind": "stage",
       "guide_url": "https://kindlemodding.org/jailbreaking/WinterBreak/",
       "summary": "Broad software route for registered 5.x Kindles below firmware 5.18.1.",
@@ -212,12 +212,12 @@
       },
       "steps": [
         "Register the Kindle and save a working Wi-Fi network.",
-        "Create the reversible OTA space guard so only 50-90 MB remains.",
         "Enable Airplane mode, restart, connect by USB, and use Prepare Kindle.",
+        "Create the reversible OTA space guard so only 50-90 MB remains.",
         "Eject, open Store, allow the documented Wi-Fi step, and run WinterBreak.",
-        "Return to Airplane mode and install the hotfix."
+        "Return to Airplane mode and verify documents/JAILBROKEN.txt."
       ],
-      "post_note": "Install the official hotfix before normal use."
+      "post_note": "The current bootstrap already installs KMC/persistence, KPM, shell integration, and OTA protection. Do not layer a separate legacy hotfix stack over it."
     },
     {
       "id": "legacy-k2-k3",

@@ -7,6 +7,11 @@ script. It is designed for the next run: detect the connected Kindle, pick the
 safe method from firmware, download the right packages, stage files, and leave
 only the unavoidable on-device taps to the user.
 
+For the audited PW5SE on firmware `5.15.1`, use the newer dedicated script and
+[PW5SE runbook](paperwhite5-5.15.1-winterbreak-koreader.md). The generic helper
+now reports WinterBreak for firmware below `5.18.1` but deliberately does not
+auto-stage its archived WinterBreak2 payload.
+
 ## Current connected device note
 
 On 2026-07-10, the connected Kindle mounted as `F:\` and reported:
@@ -14,7 +19,7 @@ On 2026-07-10, the connected Kindle mounted as `F:\` and reported:
 ```text
 Volume: Kindle
 Firmware: Kindle 5.18.1
-Serial: G0016Q03019705VN
+Serial: [redacted]
 ```
 
 That firmware is not safe for the old PW2 `5.12.2.2` WinterBreak2 path.
@@ -36,7 +41,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\kindle-jailbreak.ps1 -Action 
 # Download all current helper packages used by this workspace.
 powershell -ExecutionPolicy Bypass -File .\scripts\kindle-jailbreak.ps1 -Action DownloadModern
 
-# Prepare a below-5.16.4 Kindle with WinterBreak2 and OTA-space filler.
+# For a supported below-5.18.1 Kindle, print the dedicated WinterBreak route.
+# This no longer auto-stages the archived WinterBreak2 payload.
 powershell -ExecutionPolicy Bypass -File .\scripts\kindle-jailbreak.ps1 -Action Prepare
 
 # Stage AdBreak assets for a registered ad-supported 5.18.1-5.18.5.0.1 Kindle.
@@ -58,8 +64,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\kindle-jailbreak.ps1 -Action 
 | `DownloadLegacy` | Download the pinned PW2/WinterBreak2 package set from the manifest and verify SHA-256. |
 | `DownloadModern` | Download legacy packages plus AdBreak, PEKI, and KOReader `kindlehf` for firmware `>=5.16.3`. |
 | `BuildLegacy` | Build the old `staging/winterbreak2-root` and `staging/post-jailbreak-root` trees. |
-| `Prepare` | Auto-stage WinterBreak2 only when firmware is below `5.16.4`; otherwise prints the safe method. |
-| `StageWinterBreak2` | Copy WinterBreak2 root files. Blocks on incompatible firmware unless `-Force` is used. |
+| `Prepare` | Report the current method without inferring a model-specific payload; the audited PW5SE uses the dedicated WinterBreak helper. |
+| `StageWinterBreak2` | Explicit archived PW2 path only; requires an independent compatibility check and `-Force`. |
 | `StageAdBreak` | Backup and rewrite `.assets` for AdBreak. Requires `-Force` to prevent accidental destructive copy. |
 | `StagePostJailbreak` | Copy hotfix, MRPI, PEKI/KUAL, and KOReader. Blocks until a jailbreak marker is seen unless `-Force` is used. |
 | `FillOtaSpace` | Fill the FAT32 Kindle storage with 1 GiB chunks, leaving `-LeaveMiB` free. |
@@ -70,14 +76,13 @@ powershell -ExecutionPolicy Bypass -File .\scripts\kindle-jailbreak.ps1 -Action 
 
 | Firmware | Script routing | Notes |
 | --- | --- | --- |
-| `< 5.16.4` | `winterbreak2` | Uses the original repository path: WinterBreak2, hotfix, MRPI, KUAL, KOReader. |
-| `5.16.4` to `< 5.18.1` | `winterbreak` | Documented, but not automated here yet because it uses a different package tree. |
+| `< 5.18.1` | `winterbreak` | Use the current WinterBreak guide and a device-specific guarded helper; never infer WinterBreak2 from firmware alone. |
 | `5.18.1` to `5.18.5.0.1` | `adbreak-or-nosebleed` | AdBreak requires a registered Kindle with ads enabled; Nosebleed depends on model support. |
 | Newer/unknown | `check-current-kindlemodding` | Do not stage blindly; check KindleModding first. |
 
 ## On-device steps that cannot be automated over USB mass storage
 
-For WinterBreak2:
+For the archived PW2 WinterBreak2 record only:
 
 1. Eject the Kindle.
 2. Connect Wi-Fi only when ready.
@@ -116,6 +121,7 @@ The Windows script keeps both generations:
 | `kual-mrinstaller-khf.zip` | MRPI root folders. |
 | `Update_KUALBooklet_HDRepack.bin` | Legacy KUAL booklet package for the old PW2 path. |
 | `PEKI-latest.zip` | Modern KUAL launcher path: copy `KUAL.jar` and `KUAL.sh` into `documents`. |
+| `kual-mrinstaller-khf.tar.xz` | Modern MRPI package for KindleHF/newer-firmware devices. |
 | `koreader-kindlepw2-v2026.03.zip` | KOReader for PW2/newer firmware `<=5.16.2.1.1`. |
 | `koreader-kindlehf-v2026.03.zip` | KOReader for firmware `>=5.16.3`. |
 | `AdBreak-latest.zip` | AdBreak assets for supported registered ad-enabled firmware. |
@@ -123,6 +129,8 @@ The Windows script keeps both generations:
 ## Safety rules
 
 - Do not run WinterBreak2 on the current `5.18.1` Kindle.
+- Do not run WinterBreak2 or the legacy `StagePostJailbreak` action on the
+  audited PW5SE `5.15.1`; current WinterBreak supplies its own bootstrap stack.
 - Do not run `StageAdBreak -Force` unless ads are enabled and visible on the Kindle.
 - Keep Airplane Mode on whenever a script frees OTA-blocking space.
 - Exit KOReader before USB transfers; KOReader can block USB mass storage mode.

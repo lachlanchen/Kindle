@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import platform
 import subprocess
 import sys
@@ -9,8 +10,11 @@ from PIL import Image, ImageDraw
 
 
 ROOT = Path(__file__).resolve().parent
+REPOSITORY_ROOT = ROOT.parent
 ENTRY = ROOT / "kindle_sender.py"
 ASSET_DIRECTORY = ROOT / "build-assets"
+SHARED_KEY = REPOSITORY_ROOT / "Handoff" / "keys" / "kindle_handoff_rsa"
+SHARED_KEY_BUNDLE_DIRECTORY = "Handoff/keys"
 
 
 def create_icon() -> Path:
@@ -59,6 +63,8 @@ def create_icon() -> Path:
 
 
 def main() -> None:
+    if not SHARED_KEY.is_file():
+        raise RuntimeError("The pinned shared Kindle key asset is missing.")
     icon = create_icon()
     system = platform.system()
     arguments = [
@@ -76,6 +82,8 @@ def main() -> None:
         "paramiko",
         "--collect-all",
         "scp",
+        "--add-data",
+        f"{SHARED_KEY}{os.pathsep}{SHARED_KEY_BUNDLE_DIRECTORY}",
     ]
 
     if system == "Darwin":

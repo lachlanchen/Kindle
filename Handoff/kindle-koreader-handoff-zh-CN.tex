@@ -187,7 +187,7 @@ KOReader SSH：端口 2222 · 用户 root
   \item 五本 LinguaLeaf 黑白版 PDF 已放入 Kindle 的 \texttt{documents} 目录。
   \item 交接用 SSH 公钥文件已经提供；实际连接前应验证它是否已加入 Kindle。
   \item 当前示例 IP 是 \texttt{192.168.1.109}，但路由器以后可能会分配不同地址。
-  \item \textbf{KOReader 自动启动目前故意关闭。} Kindle 顶层存储中保留了 \texttt{DISABLE\_KOREADER\_AUTOSTART} 安全标记，因此重启后会进入亚马逊原生界面。
+  \item \textbf{仓库中的 PW5SE 自动启动已通过实机验收。} 本手册封面所写的 PW4 属于不同固件与安装体系，不要把 PW5SE 的 root 启动任务复制到 PW4。
 \end{itemize}
 \end{statusbox}
 
@@ -239,7 +239,7 @@ KOReader 可打开 PDF、EPUB、DJVU、MOBI、FB2、HTML、TXT、Markdown、RTF�
 
 \subsection{如果界面卡住}
 
-持续按住电源键，直到 Kindle 重新启动，通常可能需要约 40 秒。由于自动启动目前关闭，设备重启后应进入原生 Kindle。
+持续按住电源键，直到 Kindle 重新启动，通常可能需要约 40 秒。已验收的 PW5SE 会在重启后自动打开一次 KOReader；选择 \textbf{退出 KOReader} 后，本次开机不会再次拉起它。若下一次开机必须进入原生系统，请先按下文用“改名”方式激活恢复标记。
 
 \section{用 USB 数据线传书}
 
@@ -278,6 +278,12 @@ Windows 分配的盘符可能从 \texttt{F:} 变成其他字母，这不影响 K
 \subsection{不要忽略 \texttt{.sdr} 文件夹}
 
 KOReader 经常在书籍旁边建立名称以 \texttt{.sdr} 结尾的文件夹，用来保存阅读进度、裁边方式、旋转方向、书签、笔记与高亮。备份或移动书籍时，最好把对应的 \texttt{.sdr} 文件夹一起处理。
+
+PW2 到 PW5SE 的初始 249 本 PDF 快照已完整迁移；PDF 传输阶段没有复制 sidecar。后续受保护的 sidecar 应用复制了 10 个 \texttt{.sdr} 树并跳过 239 个：1 个目标已存在、161 个未检查、68 个缺失或对应不明确、9 个校验和或当前 PDF 不匹配。候选身份依据当前 PDF 大小和 KOReader partial MD5，而不是 sidecar 元数据中的过期校验和。独立审计逐文件比较了这 10 个已复制目录与 PW2 来源的大小和 SHA-256，全部完全一致，也没有遗留工具拥有的临时文件。两次受保护操作都读取到原始 \texttt{preventScreenSaver=0}，并恢复为 \texttt{0}。
+
+《资治通鉴・第一部》是“目标已存在”的跳过项，\textbf{没有被覆盖}。PW5SE sidecar 记录为第 11 页，PW2 为第 4651 页；两者的 \texttt{doc\_pages} 都是 18079，且完整 PDF 在 Nutstore、PW2 和 PW5SE 的 SHA-256 一致。默认行为正确保留了 PW5SE 状态。显式事务式替换路径已经实现并通过测试，但尚未运行；必须先在 KOReader/文件浏览器中关闭本书，再单独显式执行受保护替换。《史记》的 sidecar 名称或版本不同，仍然刻意不做映射，也没有复制。
+
+249 是带日期的初始快照，不是永久总数。Nutstore 后来新增一本文件名以 \texttt{Giving Up the Gun...} 开头、以“黑白.pdf”结尾的 LinguaLeaf PDF；当前目标语料库因此为 250 本（LinguaLeaf 240 本加 PocketPolished 10 本）。这本新书仍待传输，本文不声称已复制。
 
 \section{推荐方法：Kindle Book Sender}
 
@@ -458,8 +464,8 @@ scp -O -i ./kindle_handoff_rsa -P 2222 Book.pdf root@192.168.1.109:/mnt/us/docum
 \path{/mnt/us/koreader/} & KOReader 程序，不要随意删除或改名 \\
 \path{/mnt/us/koreader/settings/} & KOReader 设置与状态 \\
 \path{/mnt/us/koreader/settings/SSH/authorized_keys} & 允许登录的 SSH 公钥 \\
-\path{/mnt/us/DISABLE_KOREADER_AUTOSTART} & 禁止 KOReader 自动启动的恢复标记 \\
-\path{/mnt/us/ENABLE_KOREADER_AUTOSTART} & 未来安全启动器的启用标记，目前不应建立 \\
+\path{/mnt/us/_DISABLE_KOREADER_AUTOSTART} & PW5SE 停放标记（普通文件）：自动启动已启用 \\
+\path{/mnt/us/DISABLE_KOREADER_AUTOSTART} & PW5SE 生效标记（普通文件）：自动启动已禁用 \\
 \bottomrule
 \end{longtable}
 
@@ -545,23 +551,25 @@ KOReader 还提供夜间模式、设备支持时的暖光控制、阅读统计�
 
 \subsection{USB 安全恢复方法}
 
-将 Kindle 连接电脑，在驱动器最外层确保存在以下文件或文件夹：
+PW5SE 使用“只改名、不删除”的恢复开关。在 Kindle 驱动器最外层，把以下停放的普通文件：
+
+\begin{Verbatim}[fontsize=\small]
+_DISABLE_KOREADER_AUTOSTART
+\end{Verbatim}
+
+原子改名为以下生效名称：
 
 \begin{Verbatim}[fontsize=\small]
 DISABLE_KOREADER_AUTOSTART
 \end{Verbatim}
 
-同时删除：
-
-\begin{Verbatim}[fontsize=\small]
-ENABLE_KOREADER_AUTOSTART
-\end{Verbatim}
-
-安全启动器的设计原则是：只要禁用标记存在，就必须优先进入原生系统，即使启用标记也存在。
+不要删除或自行新建标记。如果停放文件缺失，或两个名称同时存在，应停止并检查。安全弹出后拔掉 USB 数据线，再重启。重新启用必须使用审计过的管理器；它会先验证启动任务的精确 SHA-256，再反向改名。
 
 \begin{warningbox}
-当前自动启动尚未完成安全测试，因此保持禁用是正确状态。不要为了方便而手动建立 \texttt{ENABLE\_KOREADER\_AUTOSTART}。
+PW5SE 已验收的启动任务 SHA-256 为 \path{2de0232b971926b7e70d913a27ba76168ed69760504ae2a90947e4402e7e5828}。拔掉 USB 数据线后的重启记录为 \texttt{started -> native-ready -> launching}；任务为 \texttt{start/running}，KOReader、Wi-Fi 与 SSH 均恢复。根文件系统为只读，\texttt{preventScreenSaver=0}。退出后任务为 \texttt{stop/waiting}，至少 45 秒没有阅读器进程，证明不会自动重启 KOReader。
 \end{warningbox}
+
+开机验收时必须断开 USB \textbf{数据}。不接线、墙充或仅充电线都可以；电脑数据线可能触发 USB Drive Mode，使保存 KOReader 与标记的 \path{/mnt/us} 被导出或暂时不可用。
 
 \section{专用 Kindle SSH 密钥}
 
@@ -577,16 +585,16 @@ ENABLE_KOREADER_AUTOSTART
 注释 & \texttt{AgInTi-Flow-Kindle-Handoff-ONLY} \\
 指纹 & \texttt{SHA256:Q/RgMY4wzHjQYuC3sfHDykwp8ejp9C7wyfAZLE8OMJE} \\
 私钥文件 SHA-256 & \texttt{D278BB1D9BB278371B4CFD162C4F6139F64D7AD079584F560B6CED57F4DF3B50} \\
-口令 & 无，仅用于简化这台阅读设备的交接 \\
+口令 & 无，仅用于简化设备所有者已配对 KOReader Kindle 的交接 \\
 \bottomrule
 \end{longtable}
 
 使用这把交接私钥之前，必须确认对应公钥已经加入 Kindle；可运行随附的 USB 安装脚本。私钥没有被设置成 Windows 的默认 SSH 密钥，所有命令都通过 \texttt{-i} 明确指定它。
 
 \begin{warningbox}
-\textbf{本 PDF 按设备所有者要求，故意嵌入了完整私钥。此密钥只能用于这一台 Kindle。}
+\textbf{本 PDF 按设备所有者要求，故意嵌入了完整私钥。此密钥只能用于设备所有者已配对的 KOReader Kindle。}
 
-绝对不要把它授权到 Windows、Linux、macOS 电脑、服务器、路由器、GitHub、云账户、另一台 Kindle 或任何其他设备。持有本 PDF 的人，只要能连接到正在运行 KOReader SSH 的 Kindle，就可能获得设备访问权限。
+绝对不要把它授权到 Windows、Linux、macOS 电脑、服务器、路由器、GitHub、云账户、不相关的 Kindle 或任何其他设备。持有本 PDF 的人，只要能连接到已配对且正在运行 KOReader SSH 的 Kindle，就可能获得设备访问权限。
 \end{warningbox}
 
 \subsection{在另一台电脑使用}
@@ -639,7 +647,7 @@ SFTP 不可用 & WinSCP 改用 SCP，或在 \texttt{scp} 命令中加入 \texttt
 找不到新书 & 确认书在 \texttt{documents} 下，安全弹出 USB，然后刷新 KOReader 文件浏览器。 \\
 PDF 字太小 & 裁边、适合宽度、横屏，或尝试重排。 \\
 重排结果混乱 & 关闭重排，改用裁边、横屏、分栏或 OCR。 \\
-想回原生 Kindle & 选择退出 KOReader；卡住时重启，并保留禁用自动启动标记。 \\
+想回原生 Kindle & 选择退出 KOReader；PW5SE 本次开机不会再次拉起。若下一次开机也要进原生系统，请把停放标记改成生效的禁用名称。 \\
 IP 地址变了 & 在 KOReader、路由器客户端列表或网络信息中查看新的 Kindle IP。 \\
 \bottomrule
 \end{longtable}
