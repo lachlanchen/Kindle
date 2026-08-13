@@ -181,22 +181,29 @@ If the native Kindle Home screen is visible, tap the \textbf{KOReader} document/
 
 \subsection{Autostart and the recovery switch}
 
-Autostart must always be optional and device-specific. The repository's accepted PW5SE deployment uses two persistent marker names at the visible USB root. The PW4 named on this guide's cover is a separate firmware/package family; do not copy the PW5SE root job to it.
+Autostart must always be optional and device-specific. The PW5SE deployment uses exactly one regular file among three persistent mode names at the visible USB root. The PW4 named on this guide's cover is a separate firmware/package family; do not copy the PW5SE root job to it.
 
 \begin{tabularx}{\textwidth}{>{\ttfamily}p{0.43\textwidth} X}
 \toprule
-\_DISABLE\_KOREADER\_AUTOSTART & Parked regular file: autostart is enabled. \\
+\_DISABLE\_KOREADER\_AUTOSTART & Standard mode: KOReader starts ASAP while Amazon's framework remains resident. \\
+\_DISABLE\_KOREADER\_AUTOSTART\_FRAMEWORK\_STOP & Lower-memory mode: Amazon's framework is stopped while KOReader runs and restored on clean exit. \\
 DISABLE\_KOREADER\_AUTOSTART & Active regular file: autostart is disabled and the native interface remains. \\
 \bottomrule
 \end{tabularx}
 
-The state change is rename-only: never delete either marker. Disable by atomically renaming the parked name to the active name. Enable only through the audited manager, which checks the exact installed job hash before performing the reverse rename. The job gives the native system a recovery window, applies final safety gates, launches only once, and never respawns KOReader. Therefore choosing \menupath{Exit KOReader} returns to the normal interface for the rest of that boot.
+The state change is rename-only. Disable by atomically renaming whichever underscore mode exists to the active name. Enable or select a mode only through the audited manager, which checks the exact installed job hash first. Missing, multiple, linked, directory, or special-file markers fail closed to native. The job gives the native system a recovery window, applies final safety gates, launches only once, and never respawns KOReader. Therefore choosing \menupath{Exit KOReader} returns to the normal interface for the rest of that boot.
 
 \begin{warningbox}
-\textbf{Accepted PW5SE state.} The production job SHA-256 is \path{2de0232b971926b7e70d913a27ba76168ed69760504ae2a90947e4402e7e5828}. With USB data disconnected, reboot traced \texttt{started -> native-ready -> launching}; the job was \texttt{start/running}, KOReader was running, and Wi-Fi/SSH returned. The parked \fileloc{_DISABLE_KOREADER_AUTOSTART} regular file is present and the active name is absent. The root filesystem is read-only and \texttt{preventScreenSaver=0}. Exiting KOReader left the job \texttt{stop/waiting} with no reader after at least 45 seconds, proving no respawn.
+\textbf{Current PW5SE boundary.} V1 hash \path{2de0232b971926b7e70d913a27ba76168ed69760504ae2a90947e4402e7e5828} passed boot, Wi-Fi/SSH return, clean exit, and no-respawn validation. It was atomically upgraded on 2026-08-13 to v2 hash \path{87381c8cb810b3e8606c97b5ad913a1be5f49c7a4ba6f46f66b6ae3e28e95dbd}; framework-stop is selected for the next boot. The root filesystem is read-only and \texttt{preventScreenSaver=0}. The first v2 reboot was deliberately not performed while the owner was reading, so do not confuse the accepted v1 result with v2 acceptance.
 \end{warningbox}
 
 Disconnect USB \textbf{data} before boot. No cable, a wall charger, or a charge-only cable is safe. A computer data cable can enter USB Drive Mode and export or make unavailable \path{/mnt/us}, where KOReader and its marker live.
+
+\subsection{Brightness, warmth, and the freeze guard}
+
+The 2026-08-13 audit found one concrete malformed-touch crash after wake and repeated low-memory cache eviction with a very large PDF. A reversible exact-hash gesture guard is installed for the next KOReader launch; lower-memory framework-stop is selected for the next boot. Amazon ambient auto brightness was also active underneath KOReader even though AutoWarmth was off. The managed patch now defaults it to manual and reapplies the choice after every resume.
+
+Create the exact regular root file \fileloc{ENABLE_AMAZON_AUTO_BRIGHTNESS} to opt into Amazon ambient brightness; remove it to use manual brightness. In KOReader, open \menupath{Settings -> Frontlight} for manual brightness and warmth. Open \menupath{Settings -> Screen -> Auto warmth and night mode -> Activate} for time/sun-based warmth; tap the checked activation choice again to turn it off. Edge and two-finger gestures may also alter brightness or warmth; change them under \menupath{Settings -> Taps and gestures -> Gesture manager}.
 
 \section{Send books by USB cable}
 
@@ -238,7 +245,7 @@ For the PW2-to-PW5SE migration, the completed initial 249-PDF snapshot copied no
 
 \emph{Zizhi Tongjian, Part 1} was the existing-destination skip and was not overwritten. The PW5SE records page 11 while the PW2 records page 4651; both report 18079 document pages, and the full PDF SHA-256 matches Nutstore, PW2, and PW5SE. Preserving PW5SE state is the safe default. Its explicit transactional replacement path is implemented and tested but has not run; replacement awaits closing the book in KOReader/file browser and a separate guarded run. \emph{Shiji} uses differently named or different-edition sidecars, so no match is guessed and none was copied.
 
-The 249 count is an initial dated snapshot. A later Nutstore addition, \texttt{Giving Up the Gun...｜黑白.pdf}, increased the desired corpus to 250 (240 LinguaLeaf plus 10 PocketPolished); that new book is pending and is not yet claimed transferred.
+The 249 count is an initial dated snapshot. As of 2026-08-13, the live Nutstore source contains 256 LinguaLeaf plus 10 PocketPolished PDFs (266 total). Later individually requested books were copied, but a fresh full-device 266-book reconciliation has not run, so only the original 249-book snapshot is claimed fully reconciled.
 
 \section{Recommended: use Kindle Book Sender}
 
@@ -393,8 +400,9 @@ If WinSCP reports that SFTP is unavailable, change the protocol to \textbf{SCP}.
 \path{/mnt/us/koreader/} & KOReader application; do not casually rename or delete \\
 \path{/mnt/us/koreader/settings/} & KOReader preferences and SSH settings \\
 \path{/mnt/us/koreader/settings/SSH/authorized_keys} & Public keys allowed to log in \\
-\path{/mnt/us/_DISABLE_KOREADER_AUTOSTART} & PW5SE parked regular marker: enabled \\
-\path{/mnt/us/DISABLE_KOREADER_AUTOSTART} & PW5SE active regular marker: disabled \\
+\path{/mnt/us/_DISABLE_KOREADER_AUTOSTART} & PW5SE regular marker: standard autostart mode \\
+\path{/mnt/us/_DISABLE_KOREADER_AUTOSTART_FRAMEWORK_STOP} & PW5SE regular marker: framework-stop autostart mode \\
+\path{/mnt/us/DISABLE_KOREADER_AUTOSTART} & PW5SE regular marker: autostart disabled \\
 \bottomrule
 \end{longtable}
 
@@ -468,23 +476,24 @@ This returns to Amazon's native Kindle interface.
 
 \subsection{If KOReader is unresponsive}
 
-Hold the power button until the device restarts; this can take roughly 40 seconds. On the accepted PW5SE job, a reboot launches KOReader once again unless the active recovery marker has been set. Choose \menupath{Exit KOReader} for a clean return without respawn during the current boot.
+Hold the power button until the device restarts; this can take roughly 40 seconds. The installed PW5SE v2 job is configured to launch KOReader once unless the active recovery marker has been set, but its first reboot test is still pending. Choose \menupath{Exit KOReader} for a clean return; the job contains no respawn behavior during that boot.
 
 \subsection{Recovery marker}
 
-For the accepted PW5SE deployment, disable autostart by renaming this parked regular file at the top level of the drive:
+For the installed PW5SE v2 deployment, disable autostart by atomically renaming the single enabled regular marker present at the top level of the drive. Its exact name is one of:
 
 \begin{Verbatim}[fontsize=\small]
 _DISABLE_KOREADER_AUTOSTART
+_DISABLE_KOREADER_AUTOSTART_FRAMEWORK_STOP
 \end{Verbatim}
 
-to the exact active name:
+Framework-stop is currently selected, so the second name is the expected current file. Rename that one present file to the exact disabled name:
 
 \begin{Verbatim}[fontsize=\small]
 DISABLE_KOREADER_AUTOSTART
 \end{Verbatim}
 
-Do not delete or create marker files, and do not guess if the parked file is missing or both names exist. Safely eject, disconnect USB data, and reboot. Re-enable only through the audited manager, which verifies the production job hash before reversing the rename.
+If the disabled name is already the sole regular marker, autostart is already disabled and no rename is needed. If no marker exists, multiple marker names exist, or the marker is not a regular file, stop and use the audited manager. Safely eject, disconnect USB data, and reboot. Re-enable or select an enabled mode only through the audited manager, which verifies the production job hash before changing the marker name.
 
 \section{Dedicated handoff SSH key}
 
@@ -548,7 +557,7 @@ SFTP unavailable & Use SCP in WinSCP or add \texttt{-O} to \texttt{scp}. \\
 Book missing & Put it under \texttt{documents}, eject safely, then refresh the file browser. \\
 PDF text tiny & Crop, fit width, rotate to landscape, or try reflow. \\
 Bad reflow & Disable it and use crop, landscape, columns, or OCR. \\
-Need native Kindle & Exit KOReader; the accepted PW5SE job will not respawn it during that boot. For the next boot, activate the recovery marker by rename. \\
+Need native Kindle & Exit KOReader; the installed PW5SE job contains no respawn behavior during that boot. For the next boot, activate the recovery marker by rename. \\
 \bottomrule
 \end{longtable}
 

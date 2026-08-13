@@ -1,6 +1,6 @@
 ---
 name: kindle-pw5se-commission
-description: Audit, prepare, jailbreak, and commission the documented Kindle Paperwhite 11th generation / PW5SE on firmware 5.15.1 with guarded WinterBreak2, Universal Hotfix, KOReader kindlepw2, key-only SSH, resumable Nutstore library migration, and reversible KOReader boot autostart. Use for this repo's PW5SE workflow, recovery checks, KOReader or SSH setup, autostart control, or repeatable Kindle book copying; do not use it for a different model or firmware without a fresh compatibility audit.
+description: Audit, prepare, jailbreak, and commission the documented Kindle Paperwhite 11th generation / PW5SE on firmware 5.15.1 with guarded WinterBreak2, Universal Hotfix, KOReader kindlepw2, key-only SSH, resumable Nutstore library migration, reversible multi-mode KOReader autostart, gesture-crash recovery, and brightness/warmth control. Use for this repo's PW5SE workflow, recovery checks, KOReader or SSH setup, autostart/stability/lighting control, or repeatable Kindle book copying; do not use it for a different model or firmware without a fresh compatibility audit.
 ---
 
 # Commission the audited PW5SE
@@ -57,10 +57,11 @@ gates and keep the device in Airplane Mode during USB staging.
 - Boot-test KOReader autostart with USB **data** disconnected. A wall charger or
   charge-only cable is safe; USB drive mode exports `/mnt/us`, where both the
   launcher and recovery marker live, so the job must wait/fail closed.
-- Treat `/mnt/us/DISABLE_KOREADER_AUTOSTART` as the active disable switch and
-  `/mnt/us/_DISABLE_KOREADER_AUTOSTART` as its parked enabled name. Switch only
-  by renaming the same file or directory; refuse symlinks, unsafe types, or
-  both names being present. Never delete the switch to enable autostart.
+- Require exactly one regular mode marker. `DISABLE_KOREADER_AUTOSTART` is
+  native/disabled, `_DISABLE_KOREADER_AUTOSTART` is standard `--asap`, and
+  `_DISABLE_KOREADER_AUTOSTART_FRAMEWORK_STOP` is lower-memory mode. Switch
+  only by same-directory rename; missing/multiple markers or any directory,
+  symlink, or special file must fail closed. Never enable over USB.
 
 ## Workflow
 
@@ -186,8 +187,9 @@ gates and keep the device in Airplane Mode during USB staging.
    ```
 
    `Configure` first requires the proof-bound completed KOReader stage, refuses
-   any root `emergency.sh`, and writes exactly one expected recovery key. It
-   must fail closed if a different or additional key already exists.
+   any root `emergency.sh`, installs the exact secure-SSH and manual ambient-
+   brightness patches, and writes exactly one expected recovery key. It must
+   fail closed if a different/additional key or foreign patch already exists.
 12. Safely eject, manually launch KOReader, connect the already-saved Wi-Fi
    profile, and prove admin key-only SSH on port `2222`. Then install the
    explicitly selected portable GUI/PDF identity while retaining recovery:
@@ -240,28 +242,31 @@ gates and keep the device in Airplane Mode during USB staging.
    park the existing tree under the transaction-owned rollback name, publish
    the verified PW2 tree, restore the old tree on failure, and remove the
    rollback after success. A successful transaction leaves no backup.
-14. Read `docs/pw5se-koreader-autostart-design.md` completely before changing
-   boot behavior. Require the exact owned Upstart asset SHA-256
-   `2de0232b971926b7e70d913a27ba76168ed69760504ae2a90947e4402e7e5828`
-   and pass `tests/test-koreader-autostart.ps1`. Upload the manager and job over
-   SFTP, run `audit`, and run `install`; installation must create/preserve the
-   active disable switch first, atomically publish only
-   `/etc/upstart/lazying-koreader.conf`, register it, and restore `/` read-only.
-15. Prove a disabled native boot first. Reopen KOReader once for SSH, run the
-   manager's `enable` action, and verify it renames the switch to the parked
-   underscore name. Disconnect USB data, reboot, and require the reboot-scoped
+14. Read `docs/pw5se-koreader-autostart-design.md` and
+   `docs/pw5se-koreader-stability-and-lighting.md` completely before changing
+   boot, gesture, or light behavior. Require the exact v2 Upstart asset SHA-256
+   `87381c8cb810b3e8606c97b5ad913a1be5f49c7a4ba6f46f66b6ae3e28e95dbd`
+   and pass `test-koreader-autostart.ps1`, `test-koreader-stability.ps1`, and
+   `test-koreader-ambient-brightness.ps1`. Installation must establish the
+   active disable switch first, publish only the pinned job, register it, leave
+   the running reader untouched, and restore `/` read-only.
+15. Select exactly one mode with `enable-standard` or
+   `enable-framework-stop`. Disconnect USB data, reboot, and require the
+   reboot-scoped
    trace `/tmp/lazying-koreader-autostart.trace` to reach:
 
    ```text
    phase=started
    phase=native-ready
-   phase=launching
+   phase=ambient-brightness-applied mode=0
+   phase=launching mode=<selected-mode>
    ```
 
    Require `reader.lua`, job `start/running`, both managed SSH logins, the
-   parked marker, the pinned job hash, and a read-only root. Exit KOReader and
-   wait at least 45 seconds; require job `stop/waiting`, no `reader.lua`, and no
-   relaunch during the same boot.
+   selected regular marker, pinned job/source/patch hashes, manual brightness,
+   and a read-only root. Test sleep/wake and Wi-Fi/SSH. Exit KOReader and wait
+   at least 45 seconds; require job `stop/waiting`, no `reader.lua`, no relaunch,
+   and—especially in framework-stop mode—a restored stock UI.
 
 ## Recovery
 
@@ -282,11 +287,20 @@ gates and keep the device in Airplane Mode during USB staging.
 - Use `scripts/sync-kindle-book.ps1` for literal Unicode paths and verify the
   destination SHA-256. It backs up differing destination files locally under
   ignored `device-backups/`.
-- To disable boot launch, rename `_DISABLE_KOREADER_AUTOSTART` to
-  `DISABLE_KOREADER_AUTOSTART` over USB or use the SSH manager's `disable`
-  action. To enable, use the manager's audited `enable` action so it proves the
-  installed job hash before renaming the switch back. USB-only enable is
-  forbidden because USB cannot inspect the root job.
+- To disable boot launch, rename whichever single underscore mode marker exists
+  to `DISABLE_KOREADER_AUTOSTART` over USB, or use the SSH manager's `disable`
+  action. Select a mode only through the audited SSH manager; USB-only enable
+  is forbidden because USB cannot inspect the root job.
+- For the observed `initial_tev` wake crash, use only
+  `manage-koreader-stability.sh`; require the exact original/patched/rollback
+  hashes and never hand-edit an unknown source. Upload the current repository
+  manager before maintenance; it resumes owned interruption states, refuses
+  foreign rollback-directory entries, and accepts uninstall only at exact
+  `original:absent`. It takes effect next launch and its uninstall restores the
+  pinned original.
+- Absence of `/mnt/us/ENABLE_AMAZON_AUTO_BRIGHTNESS` means manual brightness;
+  an exact regular file opts in. KOReader AutoWarmth is a separate time/sun
+  warmth scheduler. Avoid competing schedulers and direct backlight sysfs writes.
 - If an enabled boot remains in USB drive mode, disconnect USB data and leave
   the screen untouched. The bounded job can continue after `/mnt/us` returns;
   otherwise open KOReader manually and read its reboot-scoped `/tmp` trace.

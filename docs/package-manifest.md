@@ -150,3 +150,39 @@ These inputs are used only by `scripts/pw5se-winterbreak.ps1`. Firmware
   The current KPM catalog exposes KOReader only for `kindlehf`, so this repo
   installs the official archive directly and adds a small shell-integration
   launcher.
+
+### Managed PW5SE overlays (2026-08-13)
+
+These are repository-authored, firmware-gated overlays rather than downloaded
+packages:
+
+- Upstart job: `assets/koreader-lazy/lazying-koreader-autostart.conf`
+  - SHA-256:
+    `87381c8cb810b3e8606c97b5ad913a1be5f49c7a4ba6f46f66b6ae3e28e95dbd`
+  - Adds fail-closed native, standard `--asap`, and lower-memory
+    `--framework_stop` marker modes.
+- KOReader ambient-brightness patch:
+  `assets/koreader-lazy/2-lazying-art-ambient-brightness.lua`
+  - SHA-256:
+    `b762305949d6c06cd3bd1415a689e058959ed502ebcff9c69b91810c0302fb0c`
+  - Defaults Amazon ambient auto brightness to manual at KOReader startup and
+    resume; the exact regular root marker `ENABLE_AMAZON_AUTO_BRIGHTNESS` opts
+    in.
+- Gesture-stability manager:
+  `assets/koreader-lazy/manage-koreader-stability.sh`
+  - Repository SHA-256:
+    `dec93aa616d09587328af68e87efcd0d17e6119d8313186d51690128b5f93706`
+  - Pins upstream source SHA-256
+    `3a2d733a66f94e5cb1cc003c7ba736a03006e7c9242211adc243d74bc2c67db8`
+    and guarded source SHA-256
+    `8abc677d5eee22ae59f5454530eb79831f0e0f96717536edb76589de40f84ad5`.
+  - Resumes each owned rollback transaction state, refuses foreign directory
+    entries, and succeeds only at exact restored-original/no-rollback state.
+- Autostart manager: `assets/koreader-lazy/manage-koreader-autostart.sh`
+  - Repository SHA-256:
+    `453e7b368e270bdf7e540c9242538c0dfd43b1cfe854672944b124eed94493ff`
+  - Preserves the deployed v2 job hash while making malformed legacy-marker
+    upgrades fail closed through the v1-visible active stop path.
+
+The exact deployment and acceptance boundary are documented in
+`docs/pw5se-koreader-stability-and-lighting.md`.

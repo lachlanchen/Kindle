@@ -10,6 +10,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $SecureSshPatchSha256 = "6624414f7d1afca463bb98c6147a91f91d11b75d2fb682b258375450469fe264"
+$AmbientBrightnessPatchSha256 = "b762305949d6c06cd3bd1415a689e058959ed502ebcff9c69b91810c0302fb0c"
 $KOReaderLauncherSha256 = "619e707a1dee8c36c1107af195a41c2c3f7f0d9b622b4e4cb5fbfcdae9c64e25"
 
 function Resolve-KindleRoot {
@@ -50,47 +51,72 @@ function Get-UsbAutoStartMarkerState {
     param([Parameter(Mandatory = $true)][string] $Root)
 
     $activePath = Join-Path $Root "DISABLE_KOREADER_AUTOSTART"
-    $parkedPath = Join-Path $Root "_DISABLE_KOREADER_AUTOSTART"
+    $standardPath = Join-Path $Root "_DISABLE_KOREADER_AUTOSTART"
+    $frameworkStopPath = Join-Path $Root "_DISABLE_KOREADER_AUTOSTART_FRAMEWORK_STOP"
     $activePresent = Test-Path -LiteralPath $activePath
-    $parkedPresent = Test-Path -LiteralPath $parkedPath
+    $standardPresent = Test-Path -LiteralPath $standardPath
+    $frameworkStopPresent = Test-Path -LiteralPath $frameworkStopPath
     $activeRegular = $false
-    $parkedRegular = $false
+    $standardRegular = $false
+    $frameworkStopRegular = $false
 
     if ($activePresent) {
         $activeItem = Get-Item -LiteralPath $activePath -Force
         $activeRegular = (Test-Path -LiteralPath $activePath -PathType Leaf) -and
             -not [bool]($activeItem.Attributes -band [IO.FileAttributes]::ReparsePoint)
     }
-    if ($parkedPresent) {
-        $parkedItem = Get-Item -LiteralPath $parkedPath -Force
-        $parkedRegular = (Test-Path -LiteralPath $parkedPath -PathType Leaf) -and
-            -not [bool]($parkedItem.Attributes -band [IO.FileAttributes]::ReparsePoint)
+    if ($standardPresent) {
+        $standardItem = Get-Item -LiteralPath $standardPath -Force
+        $standardRegular = (Test-Path -LiteralPath $standardPath -PathType Leaf) -and
+            -not [bool]($standardItem.Attributes -band [IO.FileAttributes]::ReparsePoint)
+    }
+    if ($frameworkStopPresent) {
+        $frameworkStopItem = Get-Item -LiteralPath $frameworkStopPath -Force
+        $frameworkStopRegular = (Test-Path -LiteralPath $frameworkStopPath -PathType Leaf) -and
+            -not [bool]($frameworkStopItem.Attributes -band [IO.FileAttributes]::ReparsePoint)
     }
 
-    $state = if ($activePresent -and $parkedPresent) {
-        "unsafe_both_present"
-    } elseif ($activePresent -and -not $activeRegular) {
+    $presentCount = @($activePresent, $standardPresent, $frameworkStopPresent).Where({ $_ }).Count
+    $state = if ($activePresent -and -not $activeRegular) {
         "unsafe_active_not_regular"
-    } elseif ($parkedPresent -and -not $parkedRegular) {
-        "unsafe_parked_not_regular"
+    } elseif ($standardPresent -and -not $standardRegular) {
+        "unsafe_standard_not_regular"
+    } elseif ($frameworkStopPresent -and -not $frameworkStopRegular) {
+        "unsafe_framework_stop_not_regular"
+    } elseif ($presentCount -gt 1) {
+        "unsafe_multiple_present"
     } elseif ($activeRegular) {
         "disabled"
-    } elseif ($parkedRegular) {
+    } elseif ($standardRegular) {
         # USB storage exposes the marker but not the root-owned Upstart job.
         # Do not call this state enabled until the SSH manager audits the job.
-        "parked_job_audit_required"
+        "parked_standard_job_audit_required"
+    } elseif ($frameworkStopRegular) {
+        "parked_framework_stop_job_audit_required"
     } else {
-        "unsafe_missing_both"
+        "unsafe_missing_all"
+    }
+
+    $enabledPath = if ($standardRegular) {
+        $standardPath
+    } elseif ($frameworkStopRegular) {
+        $frameworkStopPath
+    } else {
+        $null
     }
 
     [pscustomobject][ordered]@{
         state = $state
         activePath = $activePath
-        parkedPath = $parkedPath
+        standardPath = $standardPath
+        frameworkStopPath = $frameworkStopPath
+        enabledPath = $enabledPath
         activePresent = $activePresent
         activeRegularFile = $activeRegular
-        parkedPresent = $parkedPresent
-        parkedRegularFile = $parkedRegular
+        standardPresent = $standardPresent
+        standardRegularFile = $standardRegular
+        frameworkStopPresent = $frameworkStopPresent
+        frameworkStopRegularFile = $frameworkStopRegular
     }
 }
 
@@ -104,13 +130,16 @@ function Disable-KOReaderAutoStartFromUsb {
             state = "disabled"
         }
     }
-    if ($marker.state -cne "parked_job_audit_required") {
+    if ($marker.state -cnotin @(
+        "parked_standard_job_audit_required",
+        "parked_framework_stop_job_audit_required"
+    )) {
         throw "Refusing USB autostart change: marker state is '$($marker.state)'. Do not create, delete, or guess at either marker; audit through SSH."
     }
 
     # This same-directory rename is the entire USB recovery transaction. It
     # preserves the marker's type and contents; the marker is never deleted.
-    Move-Item -LiteralPath $marker.parkedPath -Destination $marker.activePath
+    Move-Item -LiteralPath $marker.enabledPath -Destination $marker.activePath
     $after = Get-UsbAutoStartMarkerState $Root
     if ($after.state -cne "disabled") {
         throw "The USB disable-marker rename did not establish the exact disabled state."
@@ -270,11 +299,17 @@ switch ($Action) {
         $secureSshPatchVerified = (Test-Path -LiteralPath $securePatch -PathType Leaf) -and
             ((Get-FileHash -Algorithm SHA256 -LiteralPath $securePatch).Hash.ToLowerInvariant() -ceq
                 $SecureSshPatchSha256)
+        $ambientBrightnessPatch = Join-Path $koreader "patches\2-lazying-art-ambient-brightness.lua"
+        $ambientBrightnessPatchVerified = (Test-Path -LiteralPath $ambientBrightnessPatch -PathType Leaf) -and
+            ((Get-FileHash -Algorithm SHA256 -LiteralPath $ambientBrightnessPatch).Hash.ToLowerInvariant() -ceq
+                $AmbientBrightnessPatchSha256)
         $autoStartMarker = Get-UsbAutoStartMarkerState $root
         $autoStartNextBoot = if ($autoStartMarker.state -ceq "disabled") {
             "disabled_by_usb_marker"
-        } elseif ($autoStartMarker.state -ceq "parked_job_audit_required") {
-            "unknown_requires_ssh_job_audit"
+        } elseif ($autoStartMarker.state -ceq "parked_standard_job_audit_required") {
+            "standard_unknown_requires_ssh_job_audit"
+        } elseif ($autoStartMarker.state -ceq "parked_framework_stop_job_audit_required") {
+            "framework_stop_unknown_requires_ssh_job_audit"
         } else {
             "unsafe_marker_state"
         }
@@ -287,12 +322,18 @@ switch ($Action) {
             exclusiveExpectedKey = $exclusiveExpectedKey
             secureSshPatch = Test-Path -LiteralPath $securePatch
             secureSshPatchVerified = $secureSshPatchVerified
+            ambientBrightnessPatch = Test-Path -LiteralPath $ambientBrightnessPatch
+            ambientBrightnessPatchVerified = $ambientBrightnessPatchVerified
             emergencyHookPresent = Test-Path -LiteralPath $emergency
             bootAutoStartVisibility = "usb_marker_only"
             bootAutoStartMarkerState = $autoStartMarker.state
             bootAutoStartNextBoot = $autoStartNextBoot
             bootAutoStartUsbDisableSupported = $true
-            bootAutoStartDisableAvailable = $autoStartMarker.state -cin @("disabled", "parked_job_audit_required")
+            bootAutoStartDisableAvailable = $autoStartMarker.state -cin @(
+                "disabled",
+                "parked_standard_job_audit_required",
+                "parked_framework_stop_job_audit_required"
+            )
             bootAutoStartUsbEnableSupported = $false
             bootAutoStartEnableRequiresSshManager = $true
             bootAutoStartJobAudited = $false
@@ -301,7 +342,7 @@ switch ($Action) {
     "DisableAutoStart" {
         $result = Disable-KOReaderAutoStartFromUsb $root
         if ($result.changed) {
-            Write-Host "Disabled KOReader boot autostart by preserving and renaming the parked marker to DISABLE_KOREADER_AUTOSTART."
+            Write-Host "Disabled KOReader boot autostart by preserving and renaming the selected mode marker to DISABLE_KOREADER_AUTOSTART."
         } else {
             Write-Host "KOReader boot autostart is already disabled by the regular DISABLE_KOREADER_AUTOSTART marker."
         }
@@ -339,8 +380,15 @@ switch ($Action) {
                 $SecureSshPatchSha256) {
             throw "The secure-SSH patch asset is missing or does not match its pinned SHA-256."
         }
+        $sourceAmbientBrightnessPatch = Join-Path $assetRoot "2-lazying-art-ambient-brightness.lua"
+        if (-not (Test-Path -LiteralPath $sourceAmbientBrightnessPatch -PathType Leaf) -or
+            (Get-FileHash -Algorithm SHA256 -LiteralPath $sourceAmbientBrightnessPatch).Hash.ToLowerInvariant() -cne
+                $AmbientBrightnessPatchSha256) {
+            throw "The ambient-brightness patch asset is missing or does not match its pinned SHA-256."
+        }
         $patchDir = Join-Path $koreader "patches"
         $destinationPatch = Join-Path $patchDir "1-lazying-art-secure-ssh.lua"
+        $destinationAmbientBrightnessPatch = Join-Path $patchDir "2-lazying-art-ambient-brightness.lua"
         if ((Test-Path -LiteralPath $patchDir) -and
             -not (Test-Path -LiteralPath $patchDir -PathType Container)) {
             throw "The KOReader patches path is not a directory."
@@ -349,17 +397,23 @@ switch ($Action) {
         # final enabling write, so an interruption cannot leave a key without
         # its pinned key-only SSH policy.
         Install-PinnedFileAtomically $sourcePatch $destinationPatch $SecureSshPatchSha256
+        Install-PinnedFileAtomically $sourceAmbientBrightnessPatch `
+            $destinationAmbientBrightnessPatch $AmbientBrightnessPatchSha256
         Install-ExclusiveAuthorizedKeyAtomically $authorizedKeys $publicKey
         Assert-ExclusiveAuthorizedKeyState $authorizedKeys $publicKey
         if ((Get-FileHash -Algorithm SHA256 -LiteralPath $destinationPatch).Hash.ToLowerInvariant() -cne
             $SecureSshPatchSha256) {
             throw "The secure-SSH patch did not match its pinned SHA-256 after copying."
         }
+        if ((Get-FileHash -Algorithm SHA256 -LiteralPath $destinationAmbientBrightnessPatch).Hash.ToLowerInvariant() -cne
+            $AmbientBrightnessPatchSha256) {
+            throw "The ambient-brightness patch did not match its pinned SHA-256 after copying."
+        }
         if (Test-Path -LiteralPath $emergency) {
             throw "emergency.sh appeared during SSH configuration; commissioning is not complete."
         }
 
-        Write-Host "Installed the exclusive fresh public key and secure KOReader SSH defaults."
+        Write-Host "Installed the exclusive fresh public key, secure KOReader SSH defaults, and manual ambient-brightness guard."
         Write-Host "USB configuration does not change autostart. Enable only through the audited SSH manager; USB DisableAutoStart remains available as a rename-only recovery action."
     }
 }

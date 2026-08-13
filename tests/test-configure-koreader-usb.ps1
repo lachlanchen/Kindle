@@ -49,6 +49,9 @@ Assert-True ($scriptText -match "(?s)Install-PinnedFileAtomically.+Install-Exclu
 Assert-True ($scriptText -match "ConvertFrom-Json" -and $scriptText -match 'status\s+-cne\s+"verified"') `
     "The proof verifier JSON contract is not enforced."
 Assert-True ($scriptText -match "secureSshPatchVerified") "Status does not verify the patch hash."
+Assert-True ($scriptText -match "ambientBrightnessPatchVerified" -and
+    $scriptText -match '2-lazying-art-ambient-brightness\.lua') `
+    "Status does not verify the managed ambient-brightness patch."
 Assert-True ($scriptText -notmatch 'bootAutoStartSupported\s*=\s*\$false') `
     "Status still falsely reports that the accepted autostart design is unsupported."
 Assert-True ($scriptText -match 'bootAutoStartVisibility\s*=\s*"usb_marker_only"' -and
@@ -67,7 +70,7 @@ $disableFunction = @($ast.FindAll({
     $node -is [Management.Automation.Language.FunctionDefinitionAst] -and
         $node.Name -ceq "Disable-KOReaderAutoStartFromUsb"
 }, $true))[0].Extent.Text
-Assert-True ($disableFunction -match 'Move-Item\s+-LiteralPath\s+\$marker\.parkedPath\s+-Destination\s+\$marker\.activePath') `
+Assert-True ($disableFunction -match 'Move-Item\s+-LiteralPath\s+\$marker\.enabledPath\s+-Destination\s+\$marker\.activePath') `
     "USB disablement is not the exact parked-to-active same-directory rename."
 Assert-True ($disableFunction -notmatch '(Remove-Item|\.Delete\s*\()') `
     "USB disablement can delete the persistent recovery marker."
@@ -124,39 +127,52 @@ try {
     $markerRoot = Join-Path $tempRoot "markers"
     New-Item -ItemType Directory -Path $markerRoot | Out-Null
     $activeMarker = Join-Path $markerRoot "DISABLE_KOREADER_AUTOSTART"
-    $parkedMarker = Join-Path $markerRoot "_DISABLE_KOREADER_AUTOSTART"
+    $standardMarker = Join-Path $markerRoot "_DISABLE_KOREADER_AUTOSTART"
+    $frameworkStopMarker = Join-Path $markerRoot "_DISABLE_KOREADER_AUTOSTART_FRAMEWORK_STOP"
 
     $marker = Get-UsbAutoStartMarkerState $markerRoot
-    Assert-True ($marker.state -ceq "unsafe_missing_both") "Missing markers were not reported as unsafe."
+    Assert-True ($marker.state -ceq "unsafe_missing_all") "Missing markers were not reported as unsafe."
     Assert-Throws { Disable-KOReaderAutoStartFromUsb $markerRoot | Out-Null } `
         "USB disablement fabricated a missing recovery marker."
-    Assert-True (-not (Test-Path -LiteralPath $activeMarker) -and -not (Test-Path -LiteralPath $parkedMarker)) `
+    Assert-True (-not (Test-Path -LiteralPath $activeMarker) -and
+        -not (Test-Path -LiteralPath $standardMarker) -and
+        -not (Test-Path -LiteralPath $frameworkStopMarker)) `
         "The rejected missing-marker state was modified."
 
     $markerBytes = [byte[]](0, 1, 2, 127, 128, 254, 255)
-    [IO.File]::WriteAllBytes($parkedMarker, $markerBytes)
-    $beforeHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $parkedMarker).Hash
+    [IO.File]::WriteAllBytes($standardMarker, $markerBytes)
+    $beforeHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $standardMarker).Hash
     $marker = Get-UsbAutoStartMarkerState $markerRoot
-    Assert-True ($marker.state -ceq "parked_job_audit_required") `
-        "A parked marker was falsely reported as fully audited or enabled."
+    Assert-True ($marker.state -ceq "parked_standard_job_audit_required") `
+        "A standard-mode marker was falsely reported as fully audited or enabled."
     $result = Disable-KOReaderAutoStartFromUsb $markerRoot
     Assert-True ($result.changed -and $result.state -ceq "disabled") `
         "The valid USB disable rename did not report its change."
     Assert-True ((Test-Path -LiteralPath $activeMarker -PathType Leaf) -and
-        -not (Test-Path -LiteralPath $parkedMarker)) `
+        -not (Test-Path -LiteralPath $standardMarker) -and
+        -not (Test-Path -LiteralPath $frameworkStopMarker)) `
         "The valid USB disable rename did not establish the one-marker disabled state."
     Assert-True ((Get-FileHash -Algorithm SHA256 -LiteralPath $activeMarker).Hash -ceq $beforeHash) `
         "The USB disable rename changed the marker contents."
     $result = Disable-KOReaderAutoStartFromUsb $markerRoot
     Assert-True (-not $result.changed) "An already-disabled marker was not idempotent."
 
-    Move-Item -LiteralPath $activeMarker -Destination $parkedMarker
+    Move-Item -LiteralPath $activeMarker -Destination $frameworkStopMarker
+    $marker = Get-UsbAutoStartMarkerState $markerRoot
+    Assert-True ($marker.state -ceq "parked_framework_stop_job_audit_required") `
+        "A framework-stop marker was falsely reported as fully audited or enabled."
+    $result = Disable-KOReaderAutoStartFromUsb $markerRoot
+    Assert-True ($result.changed -and (Test-Path -LiteralPath $activeMarker) -and
+        -not (Test-Path -LiteralPath $frameworkStopMarker)) `
+        "The framework-stop mode could not be disabled by the same preserving rename."
+
+    Move-Item -LiteralPath $activeMarker -Destination $standardMarker
     [IO.File]::WriteAllText($activeMarker, "second marker", [Text.Encoding]::ASCII)
-    Assert-True ((Get-UsbAutoStartMarkerState $markerRoot).state -ceq "unsafe_both_present") `
+    Assert-True ((Get-UsbAutoStartMarkerState $markerRoot).state -ceq "unsafe_multiple_present") `
         "The ambiguous two-marker state was not reported as unsafe."
     Assert-Throws { Disable-KOReaderAutoStartFromUsb $markerRoot | Out-Null } `
         "USB disablement modified an ambiguous two-marker state."
-    Assert-True ((Test-Path -LiteralPath $activeMarker) -and (Test-Path -LiteralPath $parkedMarker)) `
+    Assert-True ((Test-Path -LiteralPath $activeMarker) -and (Test-Path -LiteralPath $standardMarker)) `
         "The rejected two-marker state was modified."
 } finally {
     if (Test-Path -LiteralPath $tempRoot) {

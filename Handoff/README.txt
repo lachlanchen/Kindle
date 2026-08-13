@@ -54,5 +54,12 @@ Rebuild:
   powershell -ExecutionPolicy Bypass -File .\build-guide.ps1
 
 The IP address is an example and may change. KOReader SSH uses port 2222.
-Automatic KOReader launch is intentionally disabled until a safe launcher
-with a USB recovery marker has been installed and tested.
+
+On the audited PW5SE 5.15.1, guarded autostart v2 is installed and lower-memory
+framework-stop is selected for the next boot. Its first reboot is still an
+acceptance test; disconnect USB data. To recover over USB, rename the single
+underscore mode marker to DISABLE_KOREADER_AUTOSTART. The managed gesture and
+ambient-brightness guards take effect on the next KOReader launch. Manual
+brightness is the default; the exact regular root file
+ENABLE_AMAZON_AUTO_BRIGHTNESS opts into Amazon ambient control. Do not copy
+these firmware-specific root-job instructions to another Kindle model.

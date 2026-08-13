@@ -7,10 +7,12 @@ set -u
 EXPECTED_FIRMWARE="5.15.1"
 JOB_NAME="lazying-koreader"
 JOB_PATH="/etc/upstart/${JOB_NAME}.conf"
-JOB_SHA256="2de0232b971926b7e70d913a27ba76168ed69760504ae2a90947e4402e7e5828"
+JOB_SHA256="87381c8cb810b3e8606c97b5ad913a1be5f49c7a4ba6f46f66b6ae3e28e95dbd"
+LEGACY_JOB_SHA256="2de0232b971926b7e70d913a27ba76168ed69760504ae2a90947e4402e7e5828"
 DEFAULT_CANDIDATE="/tmp/lazying-koreader-autostart.conf"
 DISABLE_MARKER="/mnt/us/DISABLE_KOREADER_AUTOSTART"
-PARKED_DISABLE_MARKER="/mnt/us/_DISABLE_KOREADER_AUTOSTART"
+STANDARD_MARKER="/mnt/us/_DISABLE_KOREADER_AUTOSTART"
+FRAMEWORK_STOP_MARKER="/mnt/us/_DISABLE_KOREADER_AUTOSTART_FRAMEWORK_STOP"
 EMERGENCY_SCRIPT="/mnt/us/emergency.sh"
 KOREADER_LAUNCHER="/mnt/us/koreader/koreader.sh"
 
@@ -46,10 +48,15 @@ job_state() {
         fi
     elif [ -L "${JOB_PATH}" ] || [ ! -f "${JOB_PATH}" ]; then
         say "foreign"
-    elif [ "$(file_sha256 "${JOB_PATH}")" = "${JOB_SHA256}" ]; then
-        say "owned"
     else
-        say "foreign"
+        installed_hash="$(file_sha256 "${JOB_PATH}")"
+        if [ "${installed_hash}" = "${JOB_SHA256}" ]; then
+            say "owned"
+        elif [ "${installed_hash}" = "${LEGACY_JOB_SHA256}" ]; then
+            say "owned_legacy"
+        else
+            say "foreign"
+        fi
     fi
 }
 
@@ -70,29 +77,36 @@ marker_kind() {
 
 marker_switch_state() {
     active_kind="$(marker_kind "${DISABLE_MARKER}")"
-    parked_kind="$(marker_kind "${PARKED_DISABLE_MARKER}")"
+    standard_kind="$(marker_kind "${STANDARD_MARKER}")"
+    framework_stop_kind="$(marker_kind "${FRAMEWORK_STOP_MARKER}")"
 
     case "${active_kind}" in
-        symlink|other)
-            say "unsafe_active_${active_kind}"
-            return 0
-            ;;
+        absent|file) ;;
+        *) say "unsafe_active_${active_kind}"; return 0 ;;
     esac
-    case "${parked_kind}" in
-        symlink|other)
-            say "unsafe_parked_${parked_kind}"
-            return 0
-            ;;
+    case "${standard_kind}" in
+        absent|file) ;;
+        *) say "unsafe_standard_${standard_kind}"; return 0 ;;
+    esac
+    case "${framework_stop_kind}" in
+        absent|file) ;;
+        *) say "unsafe_framework_stop_${framework_stop_kind}"; return 0 ;;
     esac
 
-    if [ "${active_kind}" != "absent" ] && [ "${parked_kind}" != "absent" ]; then
-        say "ambiguous_both_present"
-    elif [ "${active_kind}" = "file" ] || [ "${active_kind}" = "directory" ]; then
-        say "disabled_${active_kind}"
-    elif [ "${parked_kind}" = "file" ] || [ "${parked_kind}" = "directory" ]; then
-        say "enabled_${parked_kind}"
+    present=0
+    [ "${active_kind}" = "file" ] && present=$((present + 1))
+    [ "${standard_kind}" = "file" ] && present=$((present + 1))
+    [ "${framework_stop_kind}" = "file" ] && present=$((present + 1))
+    if [ "${present}" -eq 0 ]; then
+        say "missing_all"
+    elif [ "${present}" -ne 1 ]; then
+        say "ambiguous_multiple_present"
+    elif [ "${active_kind}" = "file" ]; then
+        say "disabled"
+    elif [ "${standard_kind}" = "file" ]; then
+        say "enabled_standard"
     else
-        say "missing_both"
+        say "enabled_framework_stop"
     fi
 }
 
@@ -180,7 +194,10 @@ reload_and_require_registered_job() {
 
 assert_owned_or_absent_job() {
     state="$(job_state)"
-    [ "${state}" != "foreign" ] || die "foreign_upstart_job_refused"
+    case "${state}" in
+        absent|owned|owned_legacy) ;;
+        *) die "foreign_upstart_job_refused" ;;
+    esac
 }
 
 assert_owned_job() {
@@ -212,6 +229,7 @@ assert_audited_runtime() {
     require_command head
     require_command initctl
     require_command lipc-wait-event
+    require_command lipc-set-prop
     require_command mntroot
     require_command mv
     require_command pidof
@@ -236,24 +254,30 @@ assert_audited_runtime() {
 ensure_disabled() {
     switch_state="$(marker_switch_state)"
     case "${switch_state}" in
-        disabled_file|disabled_directory)
+        disabled)
             return 0
             ;;
-        enabled_file|enabled_directory)
+        enabled_standard)
             rename_marker_exact \
-                "${PARKED_DISABLE_MARKER}" \
+                "${STANDARD_MARKER}" \
                 "${DISABLE_MARKER}" \
-                "disabled_${switch_state#enabled_}"
+                "disabled"
             ;;
-        missing_both)
+        enabled_framework_stop)
+            rename_marker_exact \
+                "${FRAMEWORK_STOP_MARKER}" \
+                "${DISABLE_MARKER}" \
+                "disabled"
+            ;;
+        missing_all)
             umask 022
             : >"${DISABLE_MARKER}" || die "could_not_create_initial_disable_marker"
             sync
-            [ "$(marker_switch_state)" = "disabled_file" ] || \
+            [ "$(marker_switch_state)" = "disabled" ] || \
                 die "initial_disable_marker_not_durable"
             ;;
-        ambiguous_both_present)
-            die "ambiguous_both_markers_refused"
+        ambiguous_multiple_present)
+            die "ambiguous_multiple_markers_refused"
             ;;
         unsafe_*)
             die "unsafe_marker_type_refused_${switch_state}"
@@ -264,6 +288,38 @@ ensure_disabled() {
     esac
 }
 
+ensure_legacy_fail_closed_before_marker_validation() {
+    [ "$(job_state)" = "owned_legacy" ] || return 0
+
+    # V1 knows only DISABLE_MARKER and treats any object at that path as a
+    # stop condition. Valid v2 topologies are handled normally below. If a
+    # malformed new three-marker topology has no active object, first create a
+    # conservative regular disable marker, preserving every suspect object for
+    # audit, and only then let strict v2 validation refuse the upgrade.
+    legacy_switch_state="$(marker_switch_state)"
+    case "${legacy_switch_state}" in
+        disabled|enabled_standard|enabled_framework_stop|missing_all)
+            return 0
+            ;;
+    esac
+
+    legacy_active_kind="$(marker_kind "${DISABLE_MARKER}")"
+    if [ "${legacy_active_kind}" = "absent" ]; then
+        umask 022
+        : >"${DISABLE_MARKER}" || die "legacy_fail_closed_marker_create_failed"
+        sync
+        [ "$(marker_kind "${DISABLE_MARKER}")" = "file" ] || \
+            die "legacy_fail_closed_marker_not_durable"
+    fi
+
+    # The exact v1 job gates on -e || -L, so any existing active object is
+    # already fail-closed. Do not rename or delete that object here.
+    if [ ! -e "${DISABLE_MARKER}" ] && [ ! -L "${DISABLE_MARKER}" ]; then
+        die "legacy_job_could_not_be_fail_closed"
+    fi
+    say "warning=legacy_job_fail_closed_before_invalid_marker_refusal" >&2
+}
+
 rename_marker_exact() {
     marker_from="$1"
     marker_to="$2"
@@ -272,7 +328,7 @@ rename_marker_exact() {
     marker_to_kind="$(marker_kind "${marker_to}")"
 
     case "${marker_from_kind}" in
-        file|directory) ;;
+        file) ;;
         symlink) die "source_marker_symlink_refused" ;;
         *) die "source_marker_not_renameable" ;;
     esac
@@ -290,23 +346,48 @@ rename_marker_exact() {
         die "marker_switch_state_mismatch_after_rename"
 }
 
-ensure_enabled() {
+ensure_mode() {
+    requested_mode="$1"
+    case "${requested_mode}" in
+        standard)
+            requested_marker="${STANDARD_MARKER}"
+            expected_state="enabled_standard"
+            ;;
+        framework_stop)
+            requested_marker="${FRAMEWORK_STOP_MARKER}"
+            expected_state="enabled_framework_stop"
+            ;;
+        *) die "unknown_requested_mode" ;;
+    esac
+
     switch_state="$(marker_switch_state)"
     case "${switch_state}" in
-        enabled_file|enabled_directory)
+        "${expected_state}")
             return 0
             ;;
-        disabled_file|disabled_directory)
+        disabled)
             rename_marker_exact \
                 "${DISABLE_MARKER}" \
-                "${PARKED_DISABLE_MARKER}" \
-                "enabled_${switch_state#disabled_}"
+                "${requested_marker}" \
+                "${expected_state}"
             ;;
-        missing_both)
+        enabled_standard)
+            rename_marker_exact \
+                "${STANDARD_MARKER}" \
+                "${requested_marker}" \
+                "${expected_state}"
+            ;;
+        enabled_framework_stop)
+            rename_marker_exact \
+                "${FRAMEWORK_STOP_MARKER}" \
+                "${requested_marker}" \
+                "${expected_state}"
+            ;;
+        missing_all)
             die "marker_switch_missing_refusing_enable"
             ;;
-        ambiguous_both_present)
-            die "ambiguous_both_markers_refused"
+        ambiguous_multiple_present)
+            die "ambiguous_multiple_markers_refused"
             ;;
         unsafe_*)
             die "unsafe_marker_type_refused_${switch_state}"
@@ -321,13 +402,15 @@ print_status() {
     firmware="$(firmware_version)"
     state="$(job_state)"
     active_marker="$(marker_kind "${DISABLE_MARKER}")"
-    parked_marker="$(marker_kind "${PARKED_DISABLE_MARKER}")"
+    standard_marker="$(marker_kind "${STANDARD_MARKER}")"
+    framework_stop_marker="$(marker_kind "${FRAMEWORK_STOP_MARKER}")"
     switch_state="$(marker_switch_state)"
 
     say "firmware=${firmware:-unknown}"
     say "job=${state}"
     say "disable_marker=${active_marker}"
-    say "parked_disable_marker=${parked_marker}"
+    say "standard_marker=${standard_marker}"
+    say "framework_stop_marker=${framework_stop_marker}"
     say "marker_switch=${switch_state}"
     if [ -e "${EMERGENCY_SCRIPT}" ] || [ -L "${EMERGENCY_SCRIPT}" ]; then
         say "emergency_script=present"
@@ -340,17 +423,18 @@ print_status() {
         say "koreader_launcher=absent"
     fi
 
-    if [ "${state}" = "owned" ] && \
-        { [ "${switch_state}" = "enabled_file" ] || [ "${switch_state}" = "enabled_directory" ]; } && \
+    if [ "${state}" = "owned" ] && [ "${switch_state}" = "enabled_standard" ] && \
         [ ! -e "${EMERGENCY_SCRIPT}" ] && [ ! -L "${EMERGENCY_SCRIPT}" ] && \
         [ -f "${KOREADER_LAUNCHER}" ] && [ ! -L "${KOREADER_LAUNCHER}" ]; then
-        say "autostart=enabled_next_boot"
-    elif [ "${state}" = "owned" ] && [ "${active_marker}" = "absent" ] && \
+        say "autostart=enabled_standard_next_boot"
+    elif [ "${state}" = "owned" ] && [ "${switch_state}" = "enabled_framework_stop" ] && \
         [ ! -e "${EMERGENCY_SCRIPT}" ] && [ ! -L "${EMERGENCY_SCRIPT}" ] && \
         [ -f "${KOREADER_LAUNCHER}" ] && [ ! -L "${KOREADER_LAUNCHER}" ]; then
-        # The installed job checks only the active marker. Make an invalid
-        # active-absent state explicit instead of misreporting it as disabled.
-        say "autostart=unsafe_active_marker_absent"
+        say "autostart=enabled_framework_stop_next_boot"
+    elif [ "${state}" = "owned" ] && [ "${switch_state}" != "disabled" ] && \
+        [ ! -e "${EMERGENCY_SCRIPT}" ] && [ ! -L "${EMERGENCY_SCRIPT}" ] && \
+        [ -f "${KOREADER_LAUNCHER}" ] && [ ! -L "${KOREADER_LAUNCHER}" ]; then
+        say "autostart=unsafe_marker_state"
     else
         say "autostart=disabled_or_unavailable"
     fi
@@ -365,8 +449,10 @@ install_job() {
         die "candidate_job_hash_mismatch"
 
     # Stage every install disabled. Enabling is a separate explicit action.
+    ensure_legacy_fail_closed_before_marker_validation
     ensure_disabled
-    if [ "$(job_state)" = "owned" ]; then
+    original_state="$(job_state)"
+    if [ "${original_state}" = "owned" ]; then
         reload_and_require_registered_job || \
             die "upstart_reload_or_registration_failed"
         say "result=already_installed_disabled"
@@ -386,9 +472,18 @@ install_job() {
         die "job_temp_hash_mismatch"
     chown root:root "${JOB_TMP}" || die "job_chown_failed"
     chmod 0644 "${JOB_TMP}" || die "job_chmod_failed"
-    { [ ! -e "${JOB_PATH}" ] && [ ! -L "${JOB_PATH}" ]; } || \
-        die "job_path_appeared_during_install"
-    mv "${JOB_TMP}" "${JOB_PATH}" || die "job_atomic_publish_failed"
+    current_state="$(job_state)"
+    [ "${current_state}" = "${original_state}" ] || \
+        die "job_changed_during_install"
+    case "${current_state}" in
+        absent)
+            { [ ! -e "${JOB_PATH}" ] && [ ! -L "${JOB_PATH}" ]; } || \
+                die "job_path_appeared_during_install"
+            ;;
+        owned_legacy) ;;
+        *) die "unexpected_job_state_during_install" ;;
+    esac
+    mv -f "${JOB_TMP}" "${JOB_PATH}" || die "job_atomic_publish_failed"
     OWNED_JOB_TMP=0
     JOB_TMP=""
     [ "$(job_state)" = "owned" ] || die "published_job_hash_mismatch"
@@ -397,21 +492,27 @@ install_job() {
     # Reloading configuration does not start a job; the disable marker remains.
     reload_and_require_registered_job || \
         die "upstart_reload_or_registration_failed_job_remains_disabled"
-    say "result=installed_disabled"
+    if [ "${original_state}" = "owned_legacy" ]; then
+        say "result=upgraded_disabled"
+    else
+        say "result=installed_disabled"
+    fi
     print_status
 }
 
 enable_job() {
+    requested_mode="$1"
     assert_audited_runtime
     assert_owned_job
     initctl status "${JOB_NAME}" >/dev/null 2>&1 || \
         die "installed_job_not_registered"
-    ensure_enabled
-    say "result=enabled_for_next_boot"
+    ensure_mode "${requested_mode}"
+    say "result=enabled_${requested_mode}_for_next_boot"
     print_status
 }
 
 disable_job() {
+    ensure_legacy_fail_closed_before_marker_validation
     ensure_disabled
     say "result=disabled_for_next_boot"
     print_status
@@ -419,6 +520,7 @@ disable_job() {
 
 uninstall_job() {
     # Native UI is the recovery default even if later checks refuse removal.
+    ensure_legacy_fail_closed_before_marker_validation
     ensure_disabled
     state="$(job_state)"
     [ "${state}" != "foreign" ] || die "foreign_upstart_job_refused"
@@ -429,7 +531,9 @@ uninstall_job() {
     fi
 
     begin_root_write
-    [ "$(job_state)" = "owned" ] || die "job_changed_before_uninstall"
+    current_state="$(job_state)"
+    { [ "${current_state}" = "owned" ] || [ "${current_state}" = "owned_legacy" ]; } || \
+        die "job_changed_before_uninstall"
     rm -f "${JOB_PATH}" || die "job_remove_failed"
     [ ! -e "${JOB_PATH}" ] || die "job_still_present"
     finish_root_write
@@ -440,7 +544,7 @@ uninstall_job() {
 }
 
 usage() {
-    say "usage: $0 audit|status|install|enable|disable|uninstall [candidate-conf]"
+    say "usage: $0 audit|status|install|enable|enable-standard|enable-framework-stop|disable|uninstall [candidate-conf]"
 }
 
 action="${1:-status}"
@@ -456,8 +560,11 @@ case "${action}" in
     install)
         install_job "${2:-${DEFAULT_CANDIDATE}}"
         ;;
-    enable)
-        enable_job
+    enable|enable-standard)
+        enable_job standard
+        ;;
+    enable-framework-stop)
+        enable_job framework_stop
         ;;
     disable)
         disable_job

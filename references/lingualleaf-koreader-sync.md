@@ -232,11 +232,11 @@ during confirmation. The post-transfer audit found all seven exact folder
 counts shown below, zero owned `.migrate-*.tmp` files, and 22,910,896 KiB free
 on `/mnt/us`.
 
-This is a dated snapshot, not a permanent source count. Later on 2026-08-09,
-Nutstore added one LinguaLeaf PDF, `Giving Up the Gun...｜黑白.pdf`, with source
-timestamp 17:07. That new book was not in the audited 249-entry plan and is not
-yet claimed transferred. The current desired corpus is 240 LinguaLeaf PDFs plus
-10 PocketPolished PDFs, or 250 total; append-only resume/live sync is pending.
+This is a dated snapshot, not a permanent source count. By 2026-08-13, the live
+Nutstore source had grown to 256 LinguaLeaf PDFs plus 10 PocketPolished PDFs,
+or 266 total. Later individually requested books were copied, but a fresh
+full-device 266-book reconciliation has not run; only the original 249-entry
+snapshot is claimed as a fully reconciled corpus.
 
 ### Source-of-truth rule
 
@@ -248,8 +248,8 @@ C:\Users\Administrator\Nutstore\1\Share\PocketPolished
 ```
 
 The completed snapshot inventory was 239 LinguaLeaf PDFs plus 10
-PocketPolished PDFs; the current source is 240 plus 10 after the addition noted
-above. The old PW2 is never a source for book bytes and is not an inclusion
+PocketPolished PDFs; the live 2026-08-13 source is 256 plus 10. The old PW2 is
+never a source for book bytes and is not an inclusion
 filter. It is consulted only for the relative folder of an exact-name
 predecessor and, optionally, for a compatible KOReader `.sdr` sidecar.
 Therefore every Nutstore book remains in scope even if the old PW2 never
@@ -385,6 +385,25 @@ The two noncanonical `A Brief History of Time` root paths were confirmed absent:
 The ellipses above intentionally avoid restating the long multilingual
 filename; cleanup used the exact literal paths and was hash-gated. The one
 canonical copy remains in `LinguaLeaf/en-jp-zh-blackwhite`.
+
+### Later one-book transfer: Fathers and Sons
+
+On 2026-08-13, the later Nutstore source *Fathers and Sons* was copied
+atomically to the existing language-combination folder:
+
+```text
+/mnt/us/documents/LinguaLeaf/en-jp-zh-blackwhite/Fathers and Sons（日文・中文注）｜English-日本語-中文｜黑白.pdf
+```
+
+Source and device SHA-256 both matched:
+
+```text
+bb922e485a882a957ee26e96ff4d23e76c6ece3f27c54538d019be7826337926
+```
+
+No same-name destination existed before the copy, no owned upload temporary
+file remained, and the temporary keep-awake lifecycle restored
+`preventScreenSaver=0`.
 
 ### Portable Kindle-only identity
 

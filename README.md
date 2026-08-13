@@ -38,26 +38,33 @@ explicit `persistent-state-v2` proof mode. KOReader `kindlepw2` v2026.07.1 is
 staged and independently verified: 1,034 files match exactly, and the owned OTA
 filler and root update artifacts are absent. The initial 249-book Nutstore
 snapshot is complete and its idempotent confirmation resumed all 249 entries
-without a new copy. A later LinguaLeaf addition brings the current desired
-corpus to 250 and remains pending until its transfer is confirmed. The manual
+without a new copy. As of 2026-08-13, the live Nutstore source contains 256
+LinguaLeaf plus 10 PocketPolished PDFs (266 total). Later individually requested
+books were copied, but a fresh full-device 266-book reconciliation has not run,
+so this repository does not claim that all 266 are present. The manual
 KOReader launch and both managed SSH identities work. The
 selected portable GUI/PDF key is intentionally published and restricted to
 these Kindles; the fresh PW5 key remains as recovery.
 
-The exact owned PW5SE autostart job is installed, registered, enabled, and
-accepted. Its SHA-256 is
-`2de0232b971926b7e70d913a27ba76168ed69760504ae2a90947e4402e7e5828`.
-An enabled reboot with USB data disconnected produced the trace `started` ->
-`native-ready` -> `launching`; the job was `start/running`, KOReader was
-running, and Wi-Fi/SSH returned. The regular parked marker
-`_DISABLE_KOREADER_AUTOSTART` is present and the active
-`DISABLE_KOREADER_AUTOSTART` marker is absent. Disable by atomically renaming
-the parked marker to the active name; enable only through the audited manager,
-which performs the reverse rename after checking the exact job hash. Do not
-delete either marker. `/` is read-only, `preventScreenSaver=0`, and
-`/mnt/us/emergency.sh` remains absent. An independent exit test left the job
-`stop/waiting` with no reader process after at least 45 seconds, proving there
-is no respawn.
+The accepted framework-up PW5SE autostart baseline was upgraded in place on
+2026-08-13 after a live freeze/lighting audit. The exact v2 job SHA-256 is
+`87381c8cb810b3e8606c97b5ad913a1be5f49c7a4ba6f46f66b6ae3e28e95dbd`.
+It adds explicit native, framework-up, and framework-stop modes while retaining
+the 30-second recovery window, strict regular-file markers, one launch, and no
+respawn. Framework-stop is selected for the next boot to reclaim Amazon UI
+memory; the first post-change reboot remains an explicit acceptance test and is
+not yet claimed complete. `/` is read-only, `preventScreenSaver=0`, and
+`/mnt/us/emergency.sh` remains absent.
+
+The same audit found a concrete malformed-touch crash after wake, repeated
+low-memory cache eviction while a large PDF was open, and Amazon ambient auto
+brightness still changing the light underneath KOReader. A reversible exact-
+hash gesture guard and a pinned startup/resume brightness guard are installed
+for the next KOReader launch. Ambient auto brightness, KOReader AutoWarmth,
+Amazon warmth scheduling/night light, and Automatic Dimmer are currently off.
+See the [stability and lighting runbook](docs/pw5se-koreader-stability-and-lighting.md)
+for evidence, mode recovery, exact hashes, and the user-facing brightness and
+warmth controls.
 
 Boot acceptance requires USB **data** to be disconnected. No cable, a wall
 charger, or a charge-only cable is safe; a computer data cable can enter USB
@@ -70,6 +77,7 @@ live.
 | --- | --- |
 | `docs/paperwhite5-5.15.1-winterbreak-koreader.md` | Current PW5SE Store-attempt audit, guarded WinterBreak2/hotfix fallback, KOReader, managed portable SSH, and recovery runbook |
 | `docs/pw5se-koreader-autostart-design.md` | Firmware-specific guarded autostart design, accepted live evidence, rename-only recovery marker, and USB boot boundary |
+| `docs/pw5se-koreader-stability-and-lighting.md` | PW5SE freeze diagnosis, reversible gesture guard, lower-memory boot modes, and brightness/warmth controls |
 | `docs/paperwhite2-5.12.2.2-koreader-jailbreak.md` | Full jailbreak and KOReader procedure notes |
 | `docs/package-manifest.md` | Reproducible package URLs and SHA-256 checksums |
 | `scripts/` | Detection, staging, eject, checksum, and LinguaLeaf sync helpers |
@@ -195,11 +203,11 @@ transactional explicit-replacement path is implemented and tested but has not ru
 replacement must wait until the book is closed in KOReader/file browser and an
 explicit guarded run is requested. Differently named/edition *Shiji* sidecars
 remain deliberately unmapped and were not copied. The two misplaced
-`A Brief History of Time` root copies were absent. Later source drift detected
-one new `Giving Up the Gun...｜黑白.pdf` at timestamp 2026-08-09 17:07. That
-book is not part of the completed snapshot and is not yet claimed transferred;
-the current desired inventory is 240 LinguaLeaf plus 10 PocketPolished PDFs
-(250 total).
+`A Brief History of Time` root copies were absent. Subsequent source drift grew
+the live 2026-08-13 inventory to 256 LinguaLeaf plus 10 PocketPolished PDFs
+(266 total). Later individually requested books were copied, but the completed
+249-book snapshot has not yet been superseded by a full-device reconciliation;
+the documentation therefore does not claim all 266 are present.
 The exact seven-folder audit and sidecar rules are in
 [`references/lingualleaf-koreader-sync.md`](references/lingualleaf-koreader-sync.md).
 

@@ -430,7 +430,7 @@ class MappingTests(unittest.TestCase):
                 MIGRATE.safe_relative_path(unsafe)
 
     @unittest.skipUnless(MIGRATE.DEFAULT_LINGUA.is_dir(), "local Nutstore corpus is unavailable")
-    def test_current_lingualleaf_corpus_maps_all_240_files(self):
+    def test_current_lingualleaf_corpus_maps_all_256_files(self):
         counts = {}
         mapped = 0
         for source in MIGRATE.DEFAULT_LINGUA.iterdir():
@@ -440,12 +440,12 @@ class MappingTests(unittest.TestCase):
             directory = str(Path(destination).parent).replace("\\", "/")
             counts[directory] = counts.get(directory, 0) + 1
             mapped += 1
-        self.assertEqual(mapped, 240)
+        self.assertEqual(mapped, 256)
         self.assertEqual(
             counts,
             {
                 "LinguaLeaf/ar-en-jp-zh-blackwhite": 1,
-                "LinguaLeaf/en-jp-zh-blackwhite": 161,
+                "LinguaLeaf/en-jp-zh-blackwhite": 177,
                 "LinguaLeaf/jp-zh-blackwhite": 9,
                 "LinguaLeaf/waka-kana-en-jp-zh-blackwhite": 2,
                 "LinguaLeaf/wenyan-jp-zh-trilingual-leftovers-blackwhite": 3,

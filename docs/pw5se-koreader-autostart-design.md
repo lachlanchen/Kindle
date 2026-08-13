@@ -2,9 +2,12 @@
 
 This is the audited design for the personally owned Paperwhite 11th generation
 / PW5SE on firmware `5.15.1`. It is not a generic Kindle boot hook. Earlier job
-revisions failed safely, were disabled, and were uninstalled. The
-production bounded-polling job below has now passed automatic boot, normal exit,
-and no-respawn validation with USB data disconnected.
+revisions failed safely, were disabled, and were uninstalled. The v1 bounded-
+polling job passed automatic boot, normal exit, and no-respawn validation with
+USB data disconnected. On 2026-08-13 it was safely upgraded to v2, which keeps
+those boundaries and adds explicit framework-up/framework-stop modes. V2 is
+installed and selected for a first framework-stop boot, but that reboot has not
+yet been observed and is not claimed accepted.
 
 ## Decision
 
@@ -14,26 +17,27 @@ Use one independently owned Upstart service:
   `assets/koreader-lazy/lazying-koreader-autostart.conf`
 - installed path: `/etc/upstart/lazying-koreader.conf`
 - production pinned SHA-256:
-  `2de0232b971926b7e70d913a27ba76168ed69760504ae2a90947e4402e7e5828`
+  `87381c8cb810b3e8606c97b5ad913a1be5f49c7a4ba6f46f66b6ae3e28e95dbd`
 - guarded manager:
   `assets/koreader-lazy/manage-koreader-autostart.sh`
 - active recovery marker: `/mnt/us/DISABLE_KOREADER_AUTOSTART`
-- parked marker: `/mnt/us/_DISABLE_KOREADER_AUTOSTART`
+- framework-up marker: `/mnt/us/_DISABLE_KOREADER_AUTOSTART`
+- framework-stop marker:
+  `/mnt/us/_DISABLE_KOREADER_AUTOSTART_FRAMEWORK_STOP`
 
 Do not use `/mnt/us/emergency.sh`. Universal Hotfix treats that name as its own
 escape hatch and returns before normal KMC/MKK repair work whenever it exists.
 The manager and boot job only test for `emergency.sh`; neither creates, changes,
 executes, or removes it.
 
-The marker is never deleted. Disabling renames the parked marker to
-`DISABLE_KOREADER_AUTOSTART`; enabling renames it back to
-`_DISABLE_KOREADER_AUTOSTART`, and only after the exact job/runtime audit. The
-file-or-directory type and any contents are preserved. Both names present,
-neither name present, a symlink, or another special file is unsafe and blocks
-enablement. The boot job checks only the active name, while the manager also
-requires the parked name to prove a valid enabled state.
+The mode marker is never deleted by the manager. Disabling renames either
+enabled marker to `DISABLE_KOREADER_AUTOSTART`; selecting a launch mode renames
+that same regular file to the corresponding underscore name, and only after the
+exact job/runtime audit. Exactly one regular file must exist. Missing or
+multiple markers, directories, symlinks, and special files are unsafe and make
+the boot job fail closed to the native UI.
 
-## Live validation and accepted status on 2026-08-09
+## V1 live validation and accepted status on 2026-08-09
 
 - The 249-book Nutstore migration completed before the root installation.
 - The original exact job, SHA-256
@@ -74,9 +78,36 @@ requires the parked name to prove a valid enabled state.
 - A controlled launch of the same exact job reached `phase=launching`. Choosing
   **Exit KOReader** returned the job to `stop/waiting`; `reader.lua` remained
   absent for a further 45 seconds. This proves the intended no-respawn behavior.
-- Autostart is accepted for this exact firmware, job hash, and disconnected-USB
-  boot procedure. Boot with a USB data cable attached is deliberately outside
-  the accepted path; use a wall charger, charge-only cable, or no cable.
+- This v1 baseline was accepted for its exact firmware, job hash, and
+  disconnected-USB boot procedure. Boot with a USB data cable attached is
+  deliberately outside the accepted path; use a wall charger, charge-only
+  cable, or no cable.
+
+## V2 guarded upgrade on 2026-08-13
+
+The v2 manager recognizes the exact accepted v1 hash
+`2de0232b971926b7e70d913a27ba76168ed69760504ae2a90947e4402e7e5828`
+as an owned legacy state, not as arbitrary content. Live installation first
+renamed the standard marker to the active disabled marker, atomically replaced
+only the exact owned job, reloaded Upstart without starting a second reader,
+and restored `/` read-only. The already-running v1 reader and job were left
+untouched.
+
+After installation, the exact v2 job hash matched the current pin and the
+manager selected `_DISABLE_KOREADER_AUTOSTART_FRAMEWORK_STOP` for the next boot.
+This mode calls KOReader's upstream `--framework_stop` path, reclaiming the
+resident Amazon `cvm`/GUI memory while KOReader runs and allowing the launcher
+to restore `lab126_gui` on clean exit. The first reboot, suspend/resume,
+Wi-Fi/SSH return, lighting, and clean-exit restoration test remain pending. See
+[PW5SE stability and lighting](pw5se-koreader-stability-and-lighting.md) for the
+triggering memory/crash evidence and exact first-boot checklist.
+
+After the owner disconnected, the repository manager was hardened without
+changing the installed job: for an exact legacy-v1 job plus a malformed new
+marker topology, it now ensures the active v1 stop path exists before strict v2
+validation refuses the state. Existing suspect marker objects are preserved for
+audit. This closes a future-upgrade interruption edge case; the already
+deployed v2 job hash and its single framework-stop marker are unchanged.
 
 ## Boot behavior
 
@@ -90,23 +121,32 @@ checks:
 3. In the same bounded poll, require `lab126_gui` and `kppmainapp` to report
    `start/running` and require the durable `/tmp/kppmainapp_started` file.
 4. Leave a further 30-second native-UI recovery window, then recheck the mounted
-   userstore, both marker gates, launcher integrity, and duplicate-reader guard
-   immediately before the single launch attempt. The native GUI jobs are not
+   userstore, the exact one-regular-file mode, launcher integrity, and duplicate-
+   reader guard before the single launch attempt. The native GUI jobs are not
    rechecked because they can briefly restart after readiness was already
    proven.
 
-It checks the disable marker, absence of `emergency.sh`, the KOReader launcher,
-both GUI jobs, the readiness file, and absence of an existing `reader.lua`
-process before launch. Any timeout, missing file, changed safety state, or
-failed check leaves the native Kindle interface running. Syslog tag
+The final mode resolution is the launch lock point. A best-effort Amazon
+`flAuto` LIPC write occurs between that resolution and `exec`; a marker rename
+during this short call is intentionally deferred to the following boot. Select
+the mode before reboot and do not attach USB data or rename markers while the
+boot launch is in progress. This preserves the exact deployed v2 job hash while
+documenting its concurrency boundary accurately.
+
+It checks the three mode markers, absence of `emergency.sh`, the KOReader
+launcher, both GUI jobs, the readiness file, and absence of an existing
+`reader.lua` process before launch. Any timeout, missing file, changed safety
+state, or failed check leaves the native Kindle interface running. Syslog tag
 `lazying-koreader-autostart` and root-only transient trace file
 `/tmp/lazying-koreader-autostart.trace` record bounded phase breadcrumbs:
 `started`, `disabled`, `emergency-blocked`, `readiness-timeout`, `native-ready`,
 `final-userstore-missing`, `final-disabled`, `final-emergency-blocked`,
-`final-launcher-invalid`, `already-running`, and `launching`. The only launch is:
+`final-launcher-invalid`, `already-running`, and `launching`. The selected launch
+is one of:
 
 ```sh
 exec /bin/sh /mnt/us/koreader/koreader.sh --asap
+exec /bin/sh /mnt/us/koreader/koreader.sh --framework_stop
 ```
 
 The job is a service with no `task` and no `respawn` stanza. Upstart therefore
@@ -132,12 +172,13 @@ framework, Pillow, Awesome, `volumd`, and cleanup on normal exit.
 
 | Action | Persistent effect |
 | --- | --- |
-| `status` | None; reports firmware, owned/foreign/absent job state, both marker types, their switch state, `emergency.sh` presence, launcher presence, and next-boot state. |
+| `status` | None; reports firmware, owned/legacy/foreign/absent job state, all three marker types, resolved mode, `emergency.sh` presence, launcher presence, and next-boot state. |
 | `audit` | None; requires exact firmware, expected stock jobs/events/tools, KMC, KOReader, no `emergency.sh`, and no foreign job. |
-| `install` | Establishes/preserves the active disable marker first, then atomically publishes only the pinned job. It remains disabled. |
-| `enable` | Atomically renames the active marker to the parked name, and only after the exact runtime/job audit. It never deletes the marker or starts the job immediately. |
-| `disable` | Atomically renames the parked marker to the active name. Only the initial missing-both recovery case creates a zero-byte active marker. It does not kill a running KOReader; exit or reboot normally. |
-| `uninstall` | Establishes/preserves the active disable marker first, then removes only the exact pinned owned job. A different job is never overwritten or removed. |
+| `install` | Establishes/preserves the active disable marker first, then atomically publishes only the pinned job. It can upgrade only the exact accepted v1 hash and remains disabled. For malformed new-marker topology under exact v1, it establishes the v1-visible active stop path before refusing and preserves suspect objects. |
+| `enable` / `enable-standard` | Selects framework-up `--asap` by atomic marker rename, after the exact runtime/job audit. It never starts the job immediately. |
+| `enable-framework-stop` | Selects lower-memory `--framework_stop` by atomic marker rename, after the same audit. |
+| `disable` | Atomically renames either enabled-mode marker to the active name. Only the initial missing-all recovery case creates a zero-byte active marker. It does not kill a running KOReader; exit or reboot normally. |
+| `uninstall` | Establishes/preserves the active disable marker first, then removes only an exact pinned current or accepted-legacy owned job. A different job is never removed. |
 
 For a root-filesystem change, the manager records whether `/` was read-only,
 uses `mntroot rw`, copies to an owned non-`.conf` temporary path, verifies the
@@ -173,8 +214,10 @@ $Common = @('-i', $Key, '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes'
 & $Ssh @Common -p $Port "root@$KindleIp" '/bin/sh /tmp/manage-koreader-autostart.sh install'
 & $Ssh @Common -p $Port "root@$KindleIp" '/bin/sh /tmp/manage-koreader-autostart.sh status'
 
-# Only after the disabled reboot test passes, opt in for the next reboot.
-& $Ssh @Common -p $Port "root@$KindleIp" '/bin/sh /tmp/manage-koreader-autostart.sh enable'
+# Select one mode for the next reboot. Framework-up remains the conservative
+# baseline; framework-stop uses less RAM while KOReader is running.
+& $Ssh @Common -p $Port "root@$KindleIp" '/bin/sh /tmp/manage-koreader-autostart.sh enable-standard'
+& $Ssh @Common -p $Port "root@$KindleIp" '/bin/sh /tmp/manage-koreader-autostart.sh enable-framework-stop'
 ```
 
 Every native process exit code must be checked. PowerShell does not throw for a
@@ -198,41 +241,42 @@ Recovery commands while SSH is reachable:
 
 The manager is intentionally placed in `/tmp`; after validation it may be
 uploaded again whenever needed. The persistent control surface is the
-active/parked marker switch plus the single exact Upstart job.
+three-name mode-marker switch plus the single exact Upstart job.
 
-## Accepted live sequence and operating procedure
+## Operating procedure and acceptance boundary
 
-The migration, read-only audit, safe failed iterations, exact cleanup, enabled
-automatic boot, Wi-Fi/SSH return, normal exit, and 45-second no-respawn watch
-are complete. The accepted production invariant is:
+The v1 automatic boot, Wi-Fi/SSH return, normal exit, and 45-second no-respawn
+watch are complete. V2 retains those tested boundaries, but framework-stop is
+not accepted until its first reboot checklist passes. The current invariant is:
 
 1. Require the exact job SHA-256
-   `2de0232b971926b7e70d913a27ba76168ed69760504ae2a90947e4402e7e5828`
+   `87381c8cb810b3e8606c97b5ad913a1be5f49c7a4ba6f46f66b6ae3e28e95dbd`
    and a valid one-marker switch state.
-2. To enable, use the audited manager to rename the active regular file
-   `DISABLE_KOREADER_AUTOSTART` to the parked regular file
-   `_DISABLE_KOREADER_AUTOSTART`. Do not delete it.
+2. Use the audited manager to select standard or framework-stop. It renames the
+   active regular file to the exact corresponding enabled name. Do not create a
+   second marker or enable over USB.
 3. Before rebooting, disconnect USB **data**. No cable, a wall charger, or a
    charge-only cable is safe. A normal data cable can put the Kindle into USB
    Drive Mode and export `/mnt/us`, where both KOReader and its marker live.
-4. After boot, the accepted trace is `started` -> `native-ready` -> `launching`.
-   Wi-Fi/SSH may then be used normally.
+4. After boot, require `started` -> `native-ready` ->
+   `ambient-brightness-applied` -> `launching mode=framework_stop`, then verify
+   Wi-Fi/SSH, sleep/wake, manual brightness, and clean framework restoration.
 5. To return to the native interface for the rest of that boot, choose
    **Exit KOReader**. The non-respawning Upstart service stops and waits.
 
 The marker does not terminate an already running KOReader. While SSH is
 available, run the manager's `disable` action before rebooting. If only native
 USB storage is available, let the Kindle reach the native UI first, connect USB
-data, rename `_DISABLE_KOREADER_AUTOSTART` to the exact active name
-`DISABLE_KOREADER_AUTOSTART`, safely eject, disconnect USB data, and then
-reboot. If the parked name is missing or both names exist, stop and audit rather
-than creating, deleting, or guessing at marker state.
+data, rename whichever single underscore mode marker exists to the exact active
+name `DISABLE_KOREADER_AUTOSTART`, safely eject, disconnect USB data, and then
+reboot. If neither enabled marker exists or more than one marker is present,
+stop and audit rather than creating, deleting, or guessing.
 
 ## Repository propagation
 
-General handoff material may now describe autostart as accepted, but must carry
-the exact production hash, rename-only marker semantics, and disconnected-USB
-boot requirement. Relevant surfaces are:
+General handoff material must distinguish the accepted v1 baseline from v2's
+installed-but-not-yet-reboot-accepted framework-stop mode, and carry the exact
+current hash, rename-only marker semantics, and disconnected-USB requirement.
 
 - `README.md` status and contents table
 - `docs/paperwhite5-5.15.1-winterbreak-koreader.md`, including its Phase 6
@@ -242,8 +286,9 @@ boot requirement. Relevant surfaces are:
 - both Handoff TeX sources and their rebuilt PDFs
 - `scripts/configure-koreader-usb.ps1` status reporting and its offline test
 
-The USB configurator may safely gain a **disable** action that only renames the
-parked marker to the active visible name, refusing ambiguous or unsafe states.
+The USB configurator may safely provide a **disable** action that renames either
+single enabled-mode marker to the active visible name, refusing ambiguous or
+unsafe states.
 It must not gain a USB-only **enable** action: USB storage
 cannot inspect `/etc/upstart/lazying-koreader.conf`, so it cannot prove the
 root job still matches the pin before parking recovery. Enabling remains an
@@ -266,12 +311,16 @@ SSH manager action with the exact runtime and job-hash audit.
 - KOReader deliberately suspends parts of the stock UI and `volumd` while it is
   active. Normal exit restores them; an abrupt KOReader or system kill can
   require a reboot. Autostart does not change KOReader's existing cleanup code.
+- Framework-stop additionally stops `lab126_gui`. It is selected to reclaim
+  memory but remains provisional until its first clean boot, sleep/wake, and
+  exit-restoration test on this exact device.
 - A firmware update can replace jobs, events, or jailbreak persistence. Treat
   job disappearance as a safe native-UI fallback; do not reinstall after an
   update without a new firmware audit.
-- Parking the marker after installing an unknown or edited job is forbidden.
-  `enable` requires the pinned job hash and refuses a foreign file. Marker
-  symlinks, special files, and ambiguous/missing switch states are also refused.
+- Selecting a mode after installing an unknown or edited job is forbidden.
+  Every enable action requires the pinned job hash and refuses a foreign file.
+  Marker directories, symlinks, special files, and ambiguous/missing states are
+  also refused.
 - `emergency.sh` must remain absent. Its presence blocks both audit and launch
   and must be investigated separately, never overwritten by this workflow.
 

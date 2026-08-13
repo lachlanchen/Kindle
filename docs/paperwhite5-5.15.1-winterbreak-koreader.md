@@ -393,28 +393,58 @@ publishes the canonical recovery-plus-portable set through a same-directory
 temporary file, verifies it without printing key contents, and proves portable
 BatchMode login. The superseded per-computer Book Sender key is not needed.
 
-After the library migration, the separately owned Upstart job documented in
-the [guarded autostart design](pw5se-koreader-autostart-design.md) passed its
-complete live acceptance sequence. The installed definition has SHA-256
+After the library migration, the v1 Upstart job documented in the
+[guarded autostart design](pw5se-koreader-autostart-design.md) passed its full
+live acceptance sequence with SHA-256
 `2de0232b971926b7e70d913a27ba76168ed69760504ae2a90947e4402e7e5828`.
-With USB data disconnected, an enabled reboot recorded `started` ->
-`native-ready` -> `launching`; the job was `start/running`, KOReader was
-running, and Wi-Fi/SSH returned. The regular parked marker
-`_DISABLE_KOREADER_AUTOSTART` is present and the active
-`DISABLE_KOREADER_AUTOSTART` marker is absent, so autostart is enabled.
+That accepted baseline was safely upgraded on 2026-08-13 after a live freeze
+audit. The current v2 definition SHA-256 is
+`87381c8cb810b3e8606c97b5ad913a1be5f49c7a4ba6f46f66b6ae3e28e95dbd`.
+It retains the single launch, bounded recovery window, rename-only disable
+switch, and no-respawn behavior, while adding explicit standard and lower-
+memory framework-stop modes.
 
-Marker changes are rename-only. To disable, atomically rename the parked marker
-to `DISABLE_KOREADER_AUTOSTART`; to enable, use the audited manager, which
-checks the installed job hash before renaming it back. Never delete a marker.
-The root filesystem is read-only again, `preventScreenSaver=0`, and
-`/mnt/us/emergency.sh` remains absent. Exiting KOReader left the job
-`stop/waiting` and no reader process after at least 45 seconds, proving the job
-does not respawn it during that boot.
+Framework-stop is selected for the next boot through the regular marker
+`_DISABLE_KOREADER_AUTOSTART_FRAMEWORK_STOP`. The active
+`DISABLE_KOREADER_AUTOSTART` marker and standard-mode marker are absent. The
+root filesystem is read-only, `preventScreenSaver=0`, and
+`/mnt/us/emergency.sh` remains absent. Installation did not restart the current
+reader. The first v2 framework-stop reboot has not yet been observed, so the
+accepted v1 result must not be misreported as v2 acceptance.
 
 Disconnect USB **data** before any boot acceptance test. No cable, a wall
 charger, or a charge-only cable is safe. A computer data cable can invoke USB
 Drive Mode and export/make unavailable `/mnt/us`, where both KOReader and the
 marker live; that is not an autostart failure.
+
+## 2026-08-13 freeze and frontlight audit
+
+The detailed evidence, reversible source guard, three boot modes, lighting
+state, exact hashes, and user instructions are in the
+[PW5SE stability and lighting runbook](pw5se-koreader-stability-and-lighting.md).
+
+The concrete return-to-stock event was a KOReader wake-time crash in
+`Contact:isTwoFingerTap`: a malformed touch frame had no `initial_tev` and the
+reader terminated. A narrow exact-hash guard now ignores only incomplete
+two-contact taps and loads on the next launch. The original source is retained
+under `/mnt/us/koreader/.lazying-art-stability` and can be restored only by the
+hash-gated manager. After disconnection, that repository manager was hardened
+to resume every owned rollback interruption point and to refuse foreign
+rollback-directory entries; the live guard was already in the clean
+`patched:original` state, so this changes only future maintenance. The same
+audit found repeated document-cache eviction at
+roughly 19% free RAM while a very large PDF was open; keeping Amazon `cvm` and
+`KPPMainApp` resident consumed roughly another 124 MiB, motivating the
+provisional framework-stop selection. No OOM kill, panic, filesystem error, or
+watchdog death was found.
+
+Amazon ambient auto brightness was active even though KOReader AutoWarmth was
+off. A pinned KOReader patch now defaults it to manual and reapplies that choice
+after every resume. The exact regular file
+`/mnt/us/ENABLE_AMAZON_AUTO_BRIGHTNESS` opts back into Amazon ambient control;
+absence means manual brightness. KOReader AutoWarmth, Amazon warmth scheduling
+and night light, and KOReader Automatic Dimmer were left off. Brightness and
+warmth remain manually adjustable through **Settings -> Frontlight**.
 
 ## Book sync
 
@@ -428,11 +458,11 @@ The final idempotent apply confirmation reported `bookCount=249`, `copied=0`,
 and `resumed=249`. The device audit matched the planned folder distribution,
 found zero owned upload temporary files, and reported 22,910,896 KiB free. The
 two noncanonical root copies of `A Brief History of Time` were absent; its
-canonical copy is under `documents/LinguaLeaf/en-jp-zh-blackwhite`. Later that
-day, source drift detected one newly added LinguaLeaf PDF, `Giving Up the
-Gun...｜黑白.pdf`, at source timestamp 17:07. It was not part of the 249-book
-snapshot and is not yet claimed transferred: the current source is 240
-LinguaLeaf plus 10 PocketPolished PDFs, for a desired total of 250. The
+canonical copy is under `documents/LinguaLeaf/en-jp-zh-blackwhite`. Subsequent
+source drift grew the live 2026-08-13 inventory to 256 LinguaLeaf plus 10
+PocketPolished PDFs, for a desired total of 266. Later individually requested
+books were copied, but a fresh full-device 266-book reconciliation has not run;
+only the original 249-book snapshot is claimed fully reconciled. The
 temporary `preventScreenSaver` value was restored to `0` before reboot. See the
 [library migration reference](../references/lingualleaf-koreader-sync.md) for
 the exact seven-folder counts, resumable SFTP behavior, and optional sidecar
@@ -506,9 +536,11 @@ mass-storage mode while it is running.
   call public `RemoveFiller` or recreate the filler.
 - Keep root `emergency.sh` absent. If one appears, identify its owner before
   changing it; do not run either exploit again simply because KOReader fails.
-- The autostart recovery switch is rename-only. The parked regular file
-  `_DISABLE_KOREADER_AUTOSTART` means enabled; atomically rename it to the active
-  `DISABLE_KOREADER_AUTOSTART` name to disable. Never delete either marker or
+- The autostart recovery switch is rename-only. Exactly one regular file must
+  exist: `DISABLE_KOREADER_AUTOSTART` is native/disabled,
+  `_DISABLE_KOREADER_AUTOSTART` is standard, and
+  `_DISABLE_KOREADER_AUTOSTART_FRAMEWORK_STOP` is lower-memory mode. Rename the
+  selected underscore marker to the active name to disable over USB. Never
   enable without the manager's exact job-hash audit. Disconnect USB data before
   reboot, because USB Drive Mode can make `/mnt/us` unavailable.
 - If KOReader itself is damaged, exit to the stock UI, reconnect USB, and rerun
@@ -531,7 +563,7 @@ Status after commissioning and library migration on 2026-08-09:
 | Visible jailbreak state | WinterBreak2, Universal Hotfix, and KOReader are installed. The Store-route `JAILBROKEN.txt` marker remains absent by design; KUAL and MRPI were not needed for the direct shell-integration launcher. |
 | USB backup | Initial audit backup completed at `device-backups/pw5se-5.15.1-20260808-182504/`; fresh pre-stage backup completed at `device-backups/pw5se-5.15.1-20260808-202155/` (both ignored by Git). |
 | Downloads | Store WinterBreak, official WinterBreak2 `1.0.0`, Universal Hotfix `2.5.0`, and KOReader inputs are pinned by SHA-256 under ignored `downloads/`. |
-| Full library migration | The initial 249-book snapshot finished with `copied=0`, `resumed=249` in its idempotent confirmation. One later LinguaLeaf source addition is pending, so the current desired corpus is 250 (240+10), not permanently 249. Book bytes come only from Nutstore; the PW2 contributes folder mapping and guarded reading state only. The sidecar apply copied 10 and skipped 239: one existing destination, 161 not inspected, 68 absent/ambiguous, and nine checksum/current-PDF mismatches. Independent size/SHA-256 audit passed all 10 copied trees with no owned temporary files; both keep-awake guards restored their original value of `0`. *Zizhi Tongjian, Part 1* was deliberately preserved at the PW5SE's existing page 11 rather than overwritten with the PW2's page 4651 state; explicit transactional replacement has not run. Differently named/edition *Shiji* sidecars remain unmapped. |
+| Full library migration | The initial 249-book snapshot finished with `copied=0`, `resumed=249` in its idempotent confirmation. The live 2026-08-13 source now contains 256 LinguaLeaf plus 10 PocketPolished PDFs (266 total); later individually requested books were copied, but a fresh full-device 266-book reconciliation has not run. Book bytes come only from Nutstore; the PW2 contributes folder mapping and guarded reading state only. The sidecar apply copied 10 and skipped 239: one existing destination, 161 not inspected, 68 absent/ambiguous, and nine checksum/current-PDF mismatches. Independent size/SHA-256 audit passed all 10 copied trees with no owned temporary files; both keep-awake guards restored their original value of `0`. *Zizhi Tongjian, Part 1* was deliberately preserved at the PW5SE's existing page 11 rather than overwritten with the PW2's page 4651 state; explicit transactional replacement has not run. Differently named/edition *Shiji* sidecars remain unmapped. |
 | SSH identity | The fresh device-specific recovery key remains outside the repository. The explicitly selected published Handoff/PDF identity is the portable GUI key; both are authorized, while the former per-computer app key is revoked. |
 | WinterBreak Store staging | Complete and hash-verified. Audit record: `device-backups/winterbreak-stage-5.15.1-20260808-202159/`; owned filler has 28 chunks with no unexpected entries and retained the guarded free-space envelope. |
 | Full Store regeneration | Completed once. The original `.active_content_sandbox` is hash-backed up at `device-backups/winterbreak-store-sandbox-20260808-213054/`; the regenerated 1,384,448-byte cache is hash-backed up at `device-backups/winterbreak-store-cache-20260808-220738/`; all 17 reapplied WinterBreak files matched. The final English Store remained ordinary, so this route is closed. |
@@ -540,7 +572,8 @@ Status after commissioning and library migration on 2026-08-09:
 | Universal Hotfix proof | Universal Hotfix `2.5.0` was consumed through **Update Your Kindle** and **Run Hotfix**. The same-record diagnostic passed UID 0, persistent/runtime files, keys, shell integration, runner, update, identity, and WB2 checks; only the historical start line was unavailable. The accepted proof mode is therefore explicitly `persistent-state-v2`; no full-history or 13-job-sequence claim is made. |
 | KOReader stage | KOReader `kindlepw2` v2026.07.1 is complete and device/proof-bound. Independent source-to-device audit matched all 1,034 files / 86,579,284 bytes, including the pinned launcher; filler and root update artifacts are absent, and both PDFs remain hash-exact. |
 | SSH policy | The pinned secure-SSH patch is verified and root `emergency.sh` is absent. Admin and portable GUI/PDF key logins on port `2222` passed; the canonical two-key set has no unknown identity. Empty-password/no-key and superseded per-computer-key attempts were rejected. Wi-Fi/SSH returned after the accepted enabled reboot. |
-| KOReader autostart | Accepted. The installed job hash is `2de0232b971926b7e70d913a27ba76168ed69760504ae2a90947e4402e7e5828`. With USB data disconnected, reboot traced `started` -> `native-ready` -> `launching`; the job and reader were running and Wi-Fi/SSH returned. `_DISABLE_KOREADER_AUTOSTART` is the present parked regular file (enabled), `DISABLE_KOREADER_AUTOSTART` is absent, `/` is read-only, and `preventScreenSaver=0`. Exit produced `stop/waiting` with no reader after at least 45 seconds, so there is no respawn. |
+| KOReader autostart and stability | V1 hash `2de0232...` passed disconnected-USB boot, Wi-Fi/SSH return, clean exit, and 45-second no-respawn validation. On 2026-08-13 it was atomically upgraded to v2 hash `87381c8cb810b3e8606c97b5ad913a1be5f49c7a4ba6f46f66b6ae3e28e95dbd`; framework-stop is selected for the next boot, `/` is read-only, and the current reader was not restarted. The exact gesture guard, original rollback, and ambient-brightness patch are installed for the next launch. Runtime ambient auto brightness and every warmth/dimmer scheduler are off. V2's first reboot remains pending and is not claimed accepted. |
+| Latest requested book | *Fathers and Sons* was copied atomically to `documents/LinguaLeaf/en-jp-zh-blackwhite`; device SHA-256 `bb922e485a882a957ee26e96ff4d23e76c6ece3f27c54538d019be7826337926` matched Nutstore, no owned temporary file remained, and `preventScreenSaver` was restored to `0`. |
 
 The first filler process reached its Windows execution window after allocating
 17 full chunks. Before resuming, the script verified the completed staging
@@ -613,8 +646,9 @@ policy, both managed identities, automatic KOReader launch, saved-Wi-Fi return,
 SSH return, normal exit, and no-respawn behavior all passed live testing. Ten
 guarded reading-state sidecars were copied and independently audited. The
 existing PW5SE *Zizhi Tongjian, Part 1* state was preserved, and *Shiji* remains
-unmapped; neither affects commissioning acceptance. The new 250th Nutstore PDF
-is a later source-drift item and remains pending until separately confirmed.
+unmapped; neither affects commissioning acceptance. The source has since grown
+to 266 desired PDFs; later individually requested copies are recorded, but a
+fresh full-device reconciliation remains pending.
 
 ## Upstream references
 
