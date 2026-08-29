@@ -2,6 +2,10 @@
 
 Date: 2026-06-11
 
+Current schema-2 canonical organization and the guarded 2026-08-29 workflow
+are documented in `references/canonical-lingualleaf-koreader-sync.md`. Keep
+this file for the earlier USB and 249-book snapshot history.
+
 The first part of this note is the historical five-book USB sync completed on
 that date. The larger Nutstore-to-PW5SE migration completed and independently
 confirmed on 2026-08-09 is documented separately at the end.

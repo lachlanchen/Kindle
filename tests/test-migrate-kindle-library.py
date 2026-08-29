@@ -429,8 +429,16 @@ class MappingTests(unittest.TestCase):
             with self.subTest(unsafe=unsafe), self.assertRaises(MIGRATE.MigrationError):
                 MIGRATE.safe_relative_path(unsafe)
 
-    @unittest.skipUnless(MIGRATE.DEFAULT_LINGUA.is_dir(), "local Nutstore corpus is unavailable")
-    def test_current_lingualleaf_corpus_maps_all_256_files(self):
+    @unittest.skipUnless(
+        MIGRATE.DEFAULT_LINGUA.is_dir()
+        and sum(
+            source.suffix.casefold() == ".pdf"
+            for source in MIGRATE.DEFAULT_LINGUA.iterdir()
+        )
+        == 256,
+        "legacy flat 256-file Nutstore corpus is unavailable",
+    )
+    def test_legacy_flat_lingualleaf_corpus_maps_all_256_files(self):
         counts = {}
         mapped = 0
         for source in MIGRATE.DEFAULT_LINGUA.iterdir():

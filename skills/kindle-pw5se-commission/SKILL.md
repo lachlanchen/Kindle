@@ -242,6 +242,46 @@ gates and keep the device in Airplane Mode during USB staging.
    park the existing tree under the transaction-owned rollback name, publish
    the verified PW2 tree, restore the old tree on failure, and remove the
    rollback after success. A successful transaction leaves no backup.
+
+   For the current schema-2, category-organized library, instead read
+   `references/canonical-lingualleaf-koreader-sync.md` completely and run the
+   canonical planner before apply:
+
+   ```powershell
+   python .\scripts\sync-kindle-canonical-library.py
+   python .\scripts\sync-kindle-canonical-library.py --apply
+   ```
+
+   Keep KOReader stopped and its single autostart marker temporarily disabled
+   throughout sync and cleanup. Resume an interrupted apply with the same
+   command and ledger. Move a sidecar only with a complete byte-identical PDF;
+   preserve every incompatible PDF plus sidecar together on its sibling legacy
+   shelf. After all canonical successors verify, audit and then apply only the
+   fixed 10-file replacement allowlist:
+
+   ```powershell
+   python .\scripts\cleanup-kindle-explicit-replacements.py
+   python .\scripts\cleanup-kindle-explicit-replacements.py --apply
+   ```
+
+   Require zero refusals, then run the independent full verifier while the
+   temporary power and autostart guards remain active:
+
+   ```powershell
+   python .\scripts\verify-kindle-canonical-library.py --expected-state guarded
+   ```
+
+   Restore the externally captured keep-awake baseline and original autostart
+   marker only after that full inventory/hash check passes. Then require the
+   restored operational-state check:
+
+   ```powershell
+   python .\scripts\verify-kindle-canonical-library.py --expected-state restored --state-only
+   ```
+
+   Keep exact-inventory enforcement scoped to `LinguaLeaf/blackwhite`.
+   Preserve unreviewed old-layout siblings except for the fixed 10-file
+   path/size/SHA-256 allowlist.
 14. Read `docs/pw5se-koreader-autostart-design.md` and
    `docs/pw5se-koreader-stability-and-lighting.md` completely before changing
    boot, gesture, or light behavior. Require the exact v2 Upstart asset SHA-256
