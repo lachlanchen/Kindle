@@ -216,6 +216,10 @@ historical source layout.
 
 Sync LinguaLeaf PDFs into a KOReader-friendly folder:
 
+If you want a small library to try first, the [free public LinguaLeaf
+shelf](https://lazying.art/wenyan/?utm_source=github&utm_medium=readme&utm_campaign=kindle_koreader&utm_content=lingualleaf_shelf)
+includes multilingual Chinese-history editions in color and black-and-white.
+
 ```bash
 ./scripts/sync-lingualleaf-books.sh --all
 ```

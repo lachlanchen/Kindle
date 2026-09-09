@@ -223,6 +223,11 @@ On the Kindle:
 6. Open KUAL from the library.
 7. Launch KOReader.
 
+After KOReader opens, the [free public LinguaLeaf
+shelf](https://lazying.art/wenyan/?utm_source=github&utm_medium=guide&utm_campaign=kindle_koreader&utm_content=lingualleaf_shelf)
+provides multilingual Chinese-history PDFs for testing the reading and sync
+path before preparing your own library.
+
 If KUAL/MRPI does not run, check free space. The KindleModding guide warns that
 installing KUAL and MRPI may require about 220 MB of available space.
 
