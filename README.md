@@ -78,7 +78,7 @@ live.
 | `docs/paperwhite5-5.15.1-winterbreak-koreader.md` | Current PW5SE Store-attempt audit, guarded WinterBreak2/hotfix fallback, KOReader, managed portable SSH, and recovery runbook |
 | `docs/pw5se-koreader-autostart-design.md` | Firmware-specific guarded autostart design, accepted live evidence, rename-only recovery marker, and USB boot boundary |
 | `docs/pw5se-koreader-stability-and-lighting.md` | PW5SE freeze diagnosis, reversible gesture guard, lower-memory boot modes, and brightness/warmth controls |
-| `docs/paperwhite2-5.12.2.2-koreader-jailbreak.md` | Full jailbreak and KOReader procedure notes |
+| `docs/paperwhite2-5.12.2.2-koreader-jailbreak.md` | Dated PW2 execution record; use the live compatibility wizard for a current route |
 | `docs/package-manifest.md` | Reproducible package URLs and SHA-256 checksums |
 | `scripts/` | Detection, staging, eject, checksum, and LinguaLeaf sync helpers |
 | `tests/` | Isolated rollback and Store-sandbox safety regression checks |

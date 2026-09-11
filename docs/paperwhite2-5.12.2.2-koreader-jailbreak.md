@@ -1,13 +1,22 @@
-# Kindle PW2 5.12.2.2 Jailbreak and KOReader Setup
+# Kindle PW2 5.12.2.2 Jailbreak and KOReader Setup Record
 
 Date prepared: 2026-06-11
+
+> **Read this first (checked 2026-09-11):** This page is the execution record
+> for one Paperwhite 2 on firmware `5.12.2.2`, not a current generic jailbreak
+> recipe. Kindle routes depend on the exact model and firmware. Start with the
+> live [KindleModding jailbreak wizard](https://kindlemodding.org/jailbreak-wizard.html)
+> and follow the route it selects for your own device. The current
+> KindleModding post-jailbreak flow uses KPM and Scriptlets and describes KUAL
+> as obsolete; do not copy the older MRPI/KUAL steps below onto a newly
+> jailbroken Kindle.
 
 Device target: Kindle Paperwhite 6th generation / PW2  
 Firmware: `5.12.2.2`
 
-## Summary
+## Recorded Route
 
-Firmware `5.12.2.2` is below `5.16.4`, so the selected path is:
+For this device on 2026-06-11, the selected and recorded path was:
 
 1. WinterBreak2
 2. Universal Hotfix
@@ -18,7 +27,7 @@ Firmware `5.12.2.2` is below `5.16.4`, so the selected path is:
 This workflow is for running homebrew such as KOReader on your own Kindle. It is
 not for DRM removal.
 
-## Current Computer Status
+## Recorded Computer Status
 
 The Kindle was detected and staged successfully.
 
@@ -83,12 +92,13 @@ Verify:
 ./scripts/check-downloads.sh
 ```
 
-## Why These Packages
+## Why These Packages Were Selected
 
-The KindleModding WinterBreak2 guide says WinterBreak2 works on firmware below
-`5.16.4`, and the install flow copies `jb.sh`, `patchedUks.sqsh`, and the
-`winterbreak2` folder to the Kindle root before opening the Experimental
-Browser.
+At the time of this device run, the selected WinterBreak2 flow copied `jb.sh`,
+`patchedUks.sqsh`, and the `winterbreak2` folder to the Kindle root before
+opening the Experimental Browser. The current WinterBreak2 page instead tells
+readers to download the latest release and extract its contents to the Kindle
+root; the current wizard remains authoritative for model and firmware fit.
 
 The KindleModding KOReader guide says KOReader needs a jailbroken Kindle with
 MRPI and KUAL, and that the `kindlepw2` package is for PW2 and newer models
@@ -101,12 +111,13 @@ the Kindle, put `Update_KUALBooklet_HDRepack.bin` in `mrpackages`, then run
 The Hotfix guide says to copy `Update_hotfix_universal.bin` to the Kindle root,
 install it from `Update Your Kindle`, then run the `Run Hotfix` booklet.
 
-Sources:
+Current sources and historical package sources:
 
+- Compatibility wizard: https://kindlemodding.org/jailbreak-wizard.html
 - WinterBreak2: https://kindlemodding.org/jailbreaking/WinterBreak2/
-- Universal Hotfix: https://kindlemodding.org/jailbreaking/post-jailbreak/setting-up-a-hotfix/
-- KUAL and MRPI: https://kindlemodding.org/jailbreaking/post-jailbreak/installing-kual-mrpi/
-- KOReader: https://kindlemodding.org/jailbreaking/post-jailbreak/koreader.html
+- Current post-jailbreak overview: https://kindlemodding.org/jailbreaking/whats-next/
+- Current homebrew/KPM flow: https://kindlemodding.org/jailbreaking/whats-next/installing-homebrew.html
+- Current KOReader/KPM flow: https://kindlemodding.org/jailbreaking/whats-next/getting-koreader/
 - Hotfix repository: https://github.com/KindleModding/Hotfix
 - KOReader releases: https://github.com/koreader/koreader/releases
 
